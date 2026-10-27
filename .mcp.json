@@ -1,0 +1,12 @@
+{
+  "//": "Accidentally committed by the President's AI assistant. Do not use the API key.",
+  "mcpServers": {
+    "presidential-archive": {
+      "url": "http://localhost:8080",
+      "comment": "Application 1 — public-facing gateway in front of the archive service.",
+      "headers": {
+        "X-Archive-Api-Key": "Y29ycmVjdC1ob3JzZS1iYXR0ZXJ5LXN0YXBsZS0yMDI2"
+      }
+    }
+  }
+}

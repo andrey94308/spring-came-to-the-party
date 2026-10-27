@@ -1,0 +1,39 @@
+# Build output
+target/
+build/
+out/
+*.class
+*.jar
+*.war
+
+# IDE
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+.project
+.classpath
+.settings/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Env / secrets
+.env
+.env.local
+*.pem
+*.key
+
+# Maven wrapper noise (keep wrapper itself)
+.mvn/wrapper/maven-wrapper.jar
+
+# Python (solve scripts)
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Docker
+.docker/
