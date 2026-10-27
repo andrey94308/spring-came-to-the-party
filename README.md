@@ -24,13 +24,13 @@ Python is included in the `demo-runner` container and is not required on the hos
 
 ## Make Targets
 
-| Target | What it does |
-|--------|--------------|
-| `make clean`       | Stop containers, remove volumes, clean Maven build output |
-| `make build`       | Build all Docker images |
-| `make test-java`   | Run per-module Java unit/integration tests |
-| `make test-local`  | Bring up the stack and run the end-to-end solve script |
-| `make demo`        | Run the interactive presentation flow against the running stack |
+| Target            | What it does                                                    |
+| ----------------- | --------------------------------------------------------------- |
+| `make clean`      | Stop containers, remove volumes, clean Maven build output       |
+| `make build`      | Build all Docker images                                         |
+| `make test-java`  | Run per-module Java unit/integration tests                      |
+| `make test-local` | Bring up the stack and run the end-to-end solve script          |
+| `make demo`       | Run the interactive presentation flow against the running stack |
 
 On Windows, the same demo can be run without `make`:
 
@@ -73,10 +73,10 @@ docker compose --profile demo run --rm demo-runner python solve/solve_all.py
 
 Once the stack is running (`make up`):
 
-| Service | OpenAPI | Swagger UI |
-|---|---|---|
-| edge-gateway     | <http://localhost:8080/v3/api-docs> | <http://localhost:8080/swagger-ui.html> |
-| command-control  | <http://localhost:8082/v3/api-docs> | <http://localhost:8082/swagger-ui.html> |
+| Service         | OpenAPI                             | Swagger UI                              |
+| --------------- | ----------------------------------- | --------------------------------------- |
+| edge-gateway    | <http://localhost:8080/v3/api-docs> | <http://localhost:8080/swagger-ui.html> |
+| command-control | <http://localhost:8082/v3/api-docs> | <http://localhost:8082/swagger-ui.html> |
 
 The archive-service is internal-only on the docker network; players reach it through the edge-gateway.
 
@@ -85,4 +85,3 @@ The archive-service is internal-only on the docker network; players reach it thr
 - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — service map, inter-service contracts, trust model.
 - [`docs/EXPLOIT-FLOWS.md`](docs/EXPLOIT-FLOWS.md) — sequence diagram per flag.
 - [`docs/notes.md`](docs/notes.md) — working journal with implementation notes for the final report.
-

@@ -25,11 +25,11 @@
 
 ### Vulnerable dependency versions pinned
 
-| Component | Version | CVE |
-|---|---|---|
-| `spring-cloud-starter-gateway` | 4.2.0 (BOM-managed) | CVE-2025-41243 (4.2.x ≤ 4.2.4 affected) |
-| `spring-security-*` | 6.4.4 (override) | CVE-2025-22234 (the `spring-security.version` BOM property is overridden) |
-| `spring-ai-mariadb-store` | 1.0.3 | CVE-2026-22730 |
+| Component                      | Version             | CVE                                                                       |
+| ------------------------------ | ------------------- | ------------------------------------------------------------------------- |
+| `spring-cloud-starter-gateway` | 4.2.0 (BOM-managed) | CVE-2025-41243 (4.2.x ≤ 4.2.4 affected)                                   |
+| `spring-security-*`            | 6.4.4 (override)    | CVE-2025-22234 (the `spring-security.version` BOM property is overridden) |
+| `spring-ai-mariadb-store`      | 1.0.3               | CVE-2026-22730                                                            |
 
 ### Implementation notes
 
@@ -42,21 +42,24 @@
 
 What the restrictive accessor does **not** intercept:
 
-| SpEL node | Example | Gated by accessor? |
-|---|---|---|
-| `BeanResolver` (`@bean`) | `@systemProperties` | No |
-| `Indexer` (`[key]`) on Map/Properties/List | `@systemProperties['APP_ENV']` | No |
-| Direct method invocation on the target value | `'abc'.length()` | No (separate gating) |
-| `PropertyAccessor` (`.field` / `.getter`) | `@env.systemProperties` | **Yes** |
+| SpEL node                                    | Example                        | Gated by accessor?   |
+| -------------------------------------------- | ------------------------------ | -------------------- |
+| `BeanResolver` (`@bean`)                     | `@systemProperties`            | No                   |
+| `Indexer` (`[key]`) on Map/Properties/List   | `@systemProperties['APP_ENV']` | No                   |
+| Direct method invocation on the target value | `'abc'.length()`               | No (separate gating) |
+| `PropertyAccessor` (`.field` / `.getter`)    | `@env.systemProperties`        | **Yes**              |
 
 This is why our payload `#{@systemProperties['APP_ENV']='dev'}` succeeds even with the restrictive accessor at its default `true`: it never touches `PropertyAccessor`. It's a pure `BeanResolver → Indexer → assignment` chain. The accessor is bypassed by SpEL syntax choice, not by being disabled.
 
-A payload that *does* require disabling the restrictive accessor first (the canonical CVE PoC):
+A payload that _does_ require disabling the restrictive accessor first (the canonical CVE PoC):
+
 ```spel
 #{@environment.getPropertySources()[1].source['APP_ENV']='dev'}
 ```
+
 Here `.getPropertySources()` (method call resolved via PropertyAccessor) and `.source` (dot read on `MapPropertySource`) both go through the gate. The two-step exploit — POST a route that flips `restrictive-property-accessor.enabled` off, then POST the env-flip route — is for this shape of payload. With the indexer-only payload we use, the unlock step is dead code, so `solve_flag1.py` no longer performs it.
-- The CVE-2025-22234 73-byte timing path also doesn't manifest the way the public write-ups describe — in 6.4.4 the BCrypt encoder rejects >72 bytes BEFORE the dummy hash runs in *both* the absent and present-user paths, so timings stay equal. To expose the same observable leak (username enumeration via response time), the login controller does the user lookup + password match itself, with no dummy-hash mitigation. Both `UserDetailsService` and `BCryptPasswordEncoder` are still the stock Spring Security 6.4.4 components — we only bypass the `DaoAuthenticationProvider` mitigation, which is exactly how the CVE manifests in apps that roll their own login flow.
+
+- The CVE-2025-22234 73-byte timing path also doesn't manifest the way the public write-ups describe — in 6.4.4 the BCrypt encoder rejects >72 bytes BEFORE the dummy hash runs in _both_ the absent and present-user paths, so timings stay equal. To expose the same observable leak (username enumeration via response time), the login controller does the user lookup + password match itself, with no dummy-hash mitigation. Both `UserDetailsService` and `BCryptPasswordEncoder` are still the stock Spring Security 6.4.4 components — we only bypass the `DaoAuthenticationProvider` mitigation, which is exactly how the CVE manifests in apps that roll their own login flow.
 
 ### Test posture
 
@@ -74,15 +77,15 @@ Stack boots → Flag 1 (SpEL) → Flag 2 (BCrypt + notes) → Flag 3 (SQL inject
 
 Renamed everything to a consistent MATO (parody-NATO) theme so a reviewer can read the repo top-down and understand what each piece does without consulting `proposal.md`:
 
-| Old | New |
-|---|---|
-| `app1-gateway/`     | `services/edge-gateway/`     |
-| `internal-service/` | `services/archive-service/`  |
-| `app2-auth/`        | `services/command-control/`  |
-| `mariadb/`          | `infra/mariadb/`             |
-| `space.hackthe.groupk.gateway`   | `org.mato.edge`     |
-| `space.hackthe.groupk.internal`  | `org.mato.archive`  |
-| `space.hackthe.groupk.auth`      | `org.mato.command`  |
+| Old                             | New                         |
+| ------------------------------- | --------------------------- |
+| `app1-gateway/`                 | `services/edge-gateway/`    |
+| `internal-service/`             | `services/archive-service/` |
+| `app2-auth/`                    | `services/command-control/` |
+| `mariadb/`                      | `infra/mariadb/`            |
+| `space.hackthe.groupk.gateway`  | `org.mato.edge`             |
+| `space.hackthe.groupk.internal` | `org.mato.archive`          |
+| `space.hackthe.groupk.auth`     | `org.mato.command`          |
 
 Replaced the `APP_ENV` / `X-App-Env: dev` switch (which made the CVE-2025-41243 stage feel like a contrived dev/prod toggle) with a **MATO audit / debug-trace** flag (`mato.gateway.audit.debug-trace`). The gateway forwards `X-Debug-Trace: true` downstream when the flag is on; archive-service returns the verbose response (passwordHash + Flag 1) only on that header. The CVE payload is now `#{@systemProperties['mato.gateway.audit.debug-trace']='true'}` — same indexer-syntax bypass of the restrictive PropertyAccessor as before.
 
@@ -96,10 +99,10 @@ Other realism touches:
 
 All 10 non-Testcontainers tests still pass:
 
-| Module | Tests |
-|---|---|
-| edge-gateway     | 3/3 — actuator/gateway/routes, /actuator/env, audit-trace flag is SpEL-writable |
-| archive-service  | 2/2 — `Cve202622730ConverterTest` (the SQL-injection surface in the converter); `IntegrationFlagsTest` skipped (Testcontainers/Docker-Desktop-29 compat) |
-| command-control  | 6/6 — timing leak gap (median ~100ms vs ~2ms), OTP rejects, OTP+JWT round-trip + Flag 4, /warheads forged-token rejection |
+| Module          | Tests                                                                                                                                                    |
+| --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| edge-gateway    | 3/3 — actuator/gateway/routes, /actuator/env, audit-trace flag is SpEL-writable                                                                          |
+| archive-service | 2/2 — `Cve202622730ConverterTest` (the SQL-injection surface in the converter); `IntegrationFlagsTest` skipped (Testcontainers/Docker-Desktop-29 compat) |
+| command-control | 6/6 — timing leak gap (median ~100ms vs ~2ms), OTP rejects, OTP+JWT round-trip + Flag 4, /warheads forged-token rejection                                |
 
 Deleted code that was sometimes `dev`-confusing: the unused `_post_route("unlock", UNLOCK_PAYLOAD)` step in `solve_flag1.py` was already removed in the previous commit.

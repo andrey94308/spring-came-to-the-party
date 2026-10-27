@@ -34,12 +34,12 @@ Das Script wartet vor jedem Demo-Teil auf Enter. Der Stack muss für eine sauber
 
 ## Während des Vortrags
 
-| Nach Slide | Im Terminal zeigen | Danach |
-|---|---|---|
-| 11 | Normale `/users`-Antwort; SpEL-Route; `debug-trace` und `passwordHash` in der neuen Antwort | Zurück zu Slide 12 |
-| 13 | Wordlist-Vergleich; gefundenes Test-Passwort; `/notes` mit Basic Auth | Zurück zu Slide 14 |
-| 14 | Normale Document Search; geänderter Filter; zusätzliche Dokumente | Zurück zu Slide 15 |
-| 15 | Login-Timing-Samples; OTP-Fortschritt; JWT und letzte Antwort | Zurück zu Slide 16 |
+| Nach Slide | Im Terminal zeigen                                                                          | Danach             |
+| ---------- | ------------------------------------------------------------------------------------------- | ------------------ |
+| 11         | Normale `/users`-Antwort; SpEL-Route; `debug-trace` und `passwordHash` in der neuen Antwort | Zurück zu Slide 12 |
+| 13         | Wordlist-Vergleich; gefundenes Test-Passwort; `/notes` mit Basic Auth                       | Zurück zu Slide 14 |
+| 14         | Normale Document Search; geänderter Filter; zusätzliche Dokumente                           | Zurück zu Slide 15 |
+| 15         | Login-Timing-Samples; OTP-Fortschritt; JWT und letzte Antwort                               | Zurück zu Slide 16 |
 
 ## Hinweise
 
