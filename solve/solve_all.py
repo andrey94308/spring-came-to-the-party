@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """End-to-end exploit chain — recovers all four flags.
 
-Flow (matches the proposal's intended solve path):
+Demonstration flow:
 
   .mcp.json   →   gateway URL    (entry point)
   Flag 1      →   /users debug-trace dump + cracked password hashes

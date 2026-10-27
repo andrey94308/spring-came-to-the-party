@@ -65,8 +65,8 @@ def confirm_user_exists(command_url: str, username: str, samples: int = 7) -> bo
     med_a = statistics.median(absent)
     gap = med_p - med_a
     banner("flag4", f"  median present={med_p:.1f}ms  absent={med_a:.1f}ms  gap={gap:.1f}ms")
-    detail("flag4", "decision threshold", "gap > 50ms ⇒ user exists")
-    if gap > 50.0:
+    detail("flag4", "decision threshold", "gap > 25ms ⇒ user exists")
+    if gap > 25.0:
         banner("flag4", "  ✓ user confirmed present (BCrypt path was triggered)")
         return True
     banner("flag4", "  ✗ no significant timing gap — user likely absent")

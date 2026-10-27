@@ -10,7 +10,7 @@ import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.reactive.server.WebTestClient;
 
 /**
- * Asserts that the misconfiguration the proposal calls for is actually present:
+ * Asserts that the intended demonstration misconfiguration is present:
  *
  *   1. /actuator/gateway/routes is reachable without authentication
  *   2. /actuator/env is reachable without authentication (post-exploit observability)

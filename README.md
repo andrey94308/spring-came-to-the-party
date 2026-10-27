@@ -84,4 +84,4 @@ The archive-service is internal-only on the docker network; players reach it thr
 
 - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — service map, inter-service contracts, trust model.
 - [`docs/EXPLOIT-FLOWS.md`](docs/EXPLOIT-FLOWS.md) — sequence diagram per flag.
-- [`docs/notes.md`](docs/notes.md) — working journal with implementation notes for the final report.
+- [`docs/notes.md`](docs/notes.md) — working journal with implementation notes and test results.

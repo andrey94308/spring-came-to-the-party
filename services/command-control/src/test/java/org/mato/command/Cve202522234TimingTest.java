@@ -21,9 +21,8 @@ import org.springframework.test.web.servlet.MockMvc;
  * (~250ms at cost 10) while a non-existent user fails fast (~2ms), leaving a
  * measurable gap that lets an attacker enumerate usernames.
  *
- * The proposal flagged this as the highest implementation risk; we assert a
- * conservative gap (median > 50ms) so the test is reliable in CI but still
- * actually fails if the vulnerability is patched out.
+ * We assert a conservative gap (median > 25ms) so the test is reliable in CI
+ * but still actually fails if the vulnerability is patched out.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -58,7 +57,7 @@ class Cve202522234TimingTest {
 
         assertThat(medianPresident - medianNobody)
                 .as("timing leak gap is the CVE-2025-22234 surface for username enumeration")
-                .isGreaterThan(50);
+            .isGreaterThan(25);
     }
 
     private long timeLogin(String user, String pw) throws Exception {

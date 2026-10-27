@@ -12,8 +12,8 @@ import org.springframework.stereotype.Service;
  * Deterministic 4-digit OTP service. Like a stripped-down TOTP: HMAC-SHA256
  * over a 30-second window, take the low 4 digits.
  *
- * No rate limiting on /verify-otp — that's the proposal's intended pressure
- * mechanic (10 000 codes, 30 second window, exploit must parallelise).
+ * No rate limiting on /verify-otp, so the 10 000-code search space can be
+ * attempted within the 30-second window by parallelising requests.
  */
 @Service
 public class OtpService {

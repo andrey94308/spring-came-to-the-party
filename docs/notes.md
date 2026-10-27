@@ -1,6 +1,6 @@
-# Project Notes — Spring Came to the Party
+# Implementation Notes — Spring Came to the Party
 
-> Working journal for the final report. Append-only, dated entries.
+> Working journal of implementation decisions and test results.
 
 ---
 
@@ -11,9 +11,9 @@
 - Decided on stack: Java 21, Spring Boot 3.4.5, Maven, Docker Compose, Python for solve scripts. Reasons: latest CVEs target this generation, Maven has more documentation than Gradle for the Spring Boot ecosystem.
 - Added `.gitignore`, replaced placeholder `README.md` with a player-facing description.
 - Created scaffolding folders: `app1-gateway/`, `internal-service/`, `app2-auth/`, `solve/`, `docs/`.
-- Followed Jakob's advice: building services **without** vulnerabilities first, layering CVEs in afterwards.
+- Built the services **without** vulnerabilities first, then layered the CVE demonstrations in afterwards.
 
-### Design decisions to record for the report
+### Design decisions
 
 - **No frontend**: deliberately removed CORS / browser complexity. All player interaction is via `curl` / Python — also makes the official solve script trivial to run as `make test-local`.
 - **`.mcp.json` as the entry point**: simulates the realistic "AI assistant accidentally commits a secret" scenario (we cite the public Claude Code incident here).
@@ -75,17 +75,14 @@ Stack boots → Flag 1 (SpEL) → Flag 2 (BCrypt + notes) → Flag 3 (SQL inject
 
 ## 2026-05-01 — MATO rename + audit-trace refactor
 
-Renamed everything to a consistent MATO (parody-NATO) theme so a reviewer can read the repo top-down and understand what each piece does without consulting `proposal.md`:
+Renamed everything to a consistent MATO (parody-NATO) theme so the repository can be understood top-down:
 
-| Old                             | New                         |
-| ------------------------------- | --------------------------- |
-| `app1-gateway/`                 | `services/edge-gateway/`    |
-| `internal-service/`             | `services/archive-service/` |
-| `app2-auth/`                    | `services/command-control/` |
-| `mariadb/`                      | `infra/mariadb/`            |
-| `space.hackthe.groupk.gateway`  | `org.mato.edge`             |
-| `space.hackthe.groupk.internal` | `org.mato.archive`          |
-| `space.hackthe.groupk.auth`     | `org.mato.command`          |
+| Old                 | New                         |
+| ------------------- | --------------------------- |
+| `app1-gateway/`     | `services/edge-gateway/`    |
+| `internal-service/` | `services/archive-service/` |
+| `app2-auth/`        | `services/command-control/` |
+| `mariadb/`          | `infra/mariadb/`            |
 
 Replaced the `APP_ENV` / `X-App-Env: dev` switch (which made the CVE-2025-41243 stage feel like a contrived dev/prod toggle) with a **MATO audit / debug-trace** flag (`mato.gateway.audit.debug-trace`). The gateway forwards `X-Debug-Trace: true` downstream when the flag is on; archive-service returns the verbose response (passwordHash + Flag 1) only on that header. The CVE payload is now `#{@systemProperties['mato.gateway.audit.debug-trace']='true'}` — same indexer-syntax bypass of the restrictive PropertyAccessor as before.
 
