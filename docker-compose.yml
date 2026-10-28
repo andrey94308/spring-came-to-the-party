@@ -92,6 +92,8 @@ services:
         condition: service_started
     stdin_open: true
     tty: true
+    volumes:
+      - ./demo-state:/state
     networks:
       - mato-net
 

@@ -32,6 +32,23 @@ docker compose --profile demo run --rm demo-runner
 
 Das Script wartet vor jedem Demo-Teil auf Enter. Der Stack muss für eine saubere Vorher/Nachher-Darstellung frisch gestartet sein; nach einem früheren Durchlauf bleibt die Gateway-Einstellung bis zum Neustart verändert.
 
+## Einzelne Experimente
+
+Für einfache Kommandos pro Slide speichert der Demo-Runner seine Zwischenergebnisse in `demo-state/demo.json` auf dem Host:
+
+```bash
+docker compose up -d --wait
+rm -rf demo-state
+docker compose --profile demo run --rm demo-runner python solve/demo_stage.py 1
+docker compose --profile demo run --rm demo-runner python solve/demo_stage.py 2
+docker compose --profile demo run --rm demo-runner python solve/demo_stage.py 3
+docker compose --profile demo run --rm demo-runner python solve/demo_stage.py 4
+```
+
+`demo-2` verwendet die von `demo-1` gespeicherte User-Liste; `demo-3` verwendet die gespeicherten Basic-Auth-Daten. `demo-4` nutzt die aus Experiment 3 gespeicherte Service-URL, kann aber auch ohne sie laufen. Falls die OTP-Periode beim ersten Versuch endet, wiederholt `demo-4` den lokalen Brute-Force einmal automatisch. Für einen neuen Vortrag zuerst den Gateway mit `docker compose restart edge-gateway` zurücksetzen und danach `rm -rf demo-state` ausführen.
+
+Mit installiertem `make` sind dieselben Schritte auch als `make demo-reset`, `make demo-1`, `make demo-2`, `make demo-3` und `make demo-4` verfügbar.
+
 ## Während des Vortrags
 
 | Nach Slide | Im Terminal zeigen                                                                          | Danach             |
