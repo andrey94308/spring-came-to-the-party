@@ -1,0 +1,88 @@
+{
+  "info": {
+    "name": "MATO – Dokumentensuche: normal, Angriff, Schutz",
+    "description": "Lokales, absichtlich verwundbares Spring-Demosystem. Die Requests der Reihe nach senden und vor jedem Schritt das erwartete Ergebnis im Publikum abfragen.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "basic",
+    "basic": [
+      { "key": "username", "value": "{{demoUser}}", "type": "string" },
+      { "key": "password", "value": "{{demoPassword}}", "type": "string" }
+    ]
+  },
+  "variable": [
+    { "key": "gatewayUrl", "value": "http://localhost:8080" },
+    { "key": "demoUser", "value": "bob" },
+    { "key": "demoPassword", "value": "sunshine" }
+  ],
+  "item": [
+    {
+      "name": "1 · Normale Suche – eigene Abteilung",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"department\": \"intel-analysis\"\n}", "options": { "raw": { "language": "json" } } },
+        "url": "{{gatewayUrl}}/documents/search",
+        "description": "Bob gehört zu intel-analysis. Erwartung: Dokumente dieser Abteilung, kein Special-Ops-Dokument."
+      },
+      "event": [{ "listen": "test", "script": { "exec": [
+        "pm.test('Eigene Dokumente, kein Special Ops', function () {",
+        "  pm.response.to.have.status(200);",
+        "  const docs = pm.response.json();",
+        "  pm.expect(docs.length).to.be.above(0);",
+        "  pm.expect(docs.every(d => JSON.parse(d.metadata).department === 'intel-analysis')).to.be.true;",
+        "});"
+      ] } }]
+    },
+    {
+      "name": "2 · Fremde Abteilung direkt anfragen",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"department\": \"mato-special-ops\"\n}", "options": { "raw": { "language": "json" } } },
+        "url": "{{gatewayUrl}}/documents/search",
+        "description": "Nur der Filterwert wurde geändert. Erwartung: leere Liste, weil Bob keinen Zugriff auf diese Abteilung hat."
+      },
+      "event": [{ "listen": "test", "script": { "exec": [
+        "pm.test('Direkte Anfrage gibt keine fremden Dokumente', function () {",
+        "  pm.response.to.have.status(200);",
+        "  pm.expect(pm.response.json()).to.be.an('array').that.is.empty;",
+        "});"
+      ] } }]
+    },
+    {
+      "name": "3 · Verändertes Filterfeld – SQL Injection",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"department\": \"intel-analysis' OR '1'='1\"\n}", "options": { "raw": { "language": "json" } } },
+        "url": "{{gatewayUrl}}/documents/search",
+        "description": "Gleicher Nutzer, gleicher Endpoint. Das zusätzliche Anführungszeichen ändert den von der verwundbaren Library erzeugten SQL-Ausdruck."
+      },
+      "event": [{ "listen": "test", "script": { "exec": [
+        "pm.test('Verwundbare Suche liefert Special Ops', function () {",
+        "  pm.response.to.have.status(200);",
+        "  const docs = pm.response.json();",
+        "  pm.expect(docs.some(d => JSON.parse(d.metadata).department === 'mato-special-ops')).to.be.true;",
+        "});"
+      ] } }]
+    },
+    {
+      "name": "4 · Derselbe Input – sichere Suche",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"department\": \"intel-analysis' OR '1'='1\"\n}", "options": { "raw": { "language": "json" } } },
+        "url": "{{gatewayUrl}}/documents/search-safe",
+        "description": "Vergleichs-Endpoint mit parametrisierter SQL-Abfrage. Der gleiche Input bleibt ein String-Wert und liefert keine fremden Dokumente."
+      },
+      "event": [{ "listen": "test", "script": { "exec": [
+        "pm.test('Parametrisierte Suche liefert keine fremden Dokumente', function () {",
+        "  pm.response.to.have.status(200);",
+        "  pm.expect(pm.response.json()).to.be.an('array').that.is.empty;",
+        "});"
+      ] } }]
+    }
+  ]
+}

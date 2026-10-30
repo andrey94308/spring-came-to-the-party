@@ -2,9 +2,12 @@ package org.mato.archive.document;
 
 import java.util.List;
 import java.util.Map;
+import org.mato.archive.user.UserRepository;
 import org.springframework.ai.vectorstore.filter.Filter;
 import org.springframework.ai.vectorstore.mariadb.MariaDBFilterExpressionConverter;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -25,13 +28,15 @@ import org.springframework.web.bind.annotation.RestController;
 public class DocumentController {
 
     private final JdbcTemplate jdbc;
+    private final UserRepository users;
     /** Spring AI 1.0.3's converter takes the metadata column name. The same
      *  column appears in our `document` table. */
     private final MariaDBFilterExpressionConverter converter =
             new MariaDBFilterExpressionConverter("metadata");
 
-    public DocumentController(JdbcTemplate jdbc) {
+    public DocumentController(JdbcTemplate jdbc, UserRepository users) {
         this.jdbc = jdbc;
+        this.users = users;
     }
 
     public record SearchRequest(String query, String department) {}
@@ -39,7 +44,8 @@ public class DocumentController {
     public record DocumentDto(Long id, String title, String content, String metadata) {}
 
     @PostMapping("/search")
-    public List<DocumentDto> search(@RequestBody SearchRequest req) {
+    public List<DocumentDto> search(@RequestBody SearchRequest req,
+                                    @AuthenticationPrincipal UserDetails principal) {
         Filter.Expression expr = new Filter.Expression(
                 Filter.ExpressionType.EQ,
                 new Filter.Key("department"),
@@ -51,13 +57,38 @@ public class DocumentController {
 
         // Spring AI's converter emits a JSON_VALUE expression against a
         // `metadata` column, which is exactly how we store it here.
-        String sql = "SELECT id, title, content, metadata FROM document WHERE " + whereFragment;
+        // The employee's department comes from the server-side user record. A
+        // plain request for another department therefore returns no rows.
+        // Deliberately vulnerable: the unescaped filter can inject an OR that
+        // escapes this AND condition (SQL's AND has higher precedence).
+        String sql = "SELECT id, title, content, metadata FROM document WHERE "
+                + "JSON_VALUE(metadata, '$.department') = ? AND " + whereFragment;
 
         return jdbc.query(sql, (rs, i) -> new DocumentDto(
                 rs.getLong("id"),
                 rs.getString("title"),
                 rs.getString("content"),
-                rs.getString("metadata")));
+                rs.getString("metadata")), allowedDepartment(principal));
+    }
+
+    /** A safe comparison for the live demo: both values are JDBC parameters. */
+    @PostMapping("/search-safe")
+    public List<DocumentDto> searchSafe(@RequestBody SearchRequest req,
+                                        @AuthenticationPrincipal UserDetails principal) {
+        String sql = "SELECT id, title, content, metadata FROM document WHERE "
+                + "JSON_VALUE(metadata, '$.department') = ? AND "
+                + "JSON_VALUE(metadata, '$.department') = ?";
+        return jdbc.query(sql, (rs, i) -> new DocumentDto(
+                rs.getLong("id"),
+                rs.getString("title"),
+                rs.getString("content"),
+                rs.getString("metadata")), allowedDepartment(principal), req.department());
+    }
+
+    private String allowedDepartment(UserDetails principal) {
+        return users.findById(principal.getUsername())
+                .orElseThrow(() -> new IllegalStateException("Authenticated user is missing"))
+                .getDepartment();
     }
 
     @PostMapping("/search-debug")

@@ -151,6 +151,17 @@ class IntegrationFlagsTest {
     }
 
     @Test
+    void documentSearchCannotReadAnotherDepartmentByNamingIt() throws Exception {
+        MvcResult r = mvc.perform(post("/documents/search")
+                        .header("Authorization", basic("bob", "sunshine"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"query\":\"x\",\"department\":\"mato-special-ops\"}"))
+                .andExpect(status().isOk())
+                .andReturn();
+        assertThat(r.getResponse().getContentAsString()).isEqualTo("[]");
+    }
+
+    @Test
     void documentSearchSqlInjectionExposesSpecialOpsDocAndFlag3() throws Exception {
         // The CVE-2026-22730 payload — value contains a single quote that
         // breaks out of the SQL string literal.
@@ -164,6 +175,17 @@ class IntegrationFlagsTest {
         String body = r.getResponse().getContentAsString();
         assertThat(body).contains(flag3);
         assertThat(body).contains("mato-special-ops");
+    }
+
+    @Test
+    void safeSearchRejectsTheSameInjectedValue() throws Exception {
+        MvcResult r = mvc.perform(post("/documents/search-safe")
+                        .header("Authorization", basic("bob", "sunshine"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"query\":\"x\",\"department\":\"intel-analysis' OR '1'='1\"}"))
+                .andExpect(status().isOk())
+                .andReturn();
+        assertThat(r.getResponse().getContentAsString()).isEqualTo("[]");
     }
 
     @Test
