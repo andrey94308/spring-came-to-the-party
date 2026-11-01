@@ -9,4 +9,4 @@ spring:
         - id: archive
           uri: ${ARCHIVE_URI:http://archive-service:8081}
           predicates:
-            - Path=/signup,/users,/users/**,/organizations,/organizations/**,/documents/**
+            - Path=/signup,/users,/users/**,/documents/**

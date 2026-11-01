@@ -48,23 +48,22 @@ assert call('POST', '/documents/search', 200, username, password,
 users = call('GET', '/users', 200, username, password)
 assert users and any(user['username'] == 'anna' for user in users)
 assert any(user['role'] == 'admin' for user in users)
+assert all('organizationUuid' not in user for user in users)
 debug_users = call('GET', '/users?debug=true', 200, username, password)
 assert all(user['passwordHash'].startswith(('$2a$', '$2b$', '$2y$')) for user in debug_users)
+assert all('organizationUuid' not in user for user in debug_users)
 anna = next(user for user in debug_users if user['username'] == 'anna')
 assert anna['passwordHash'].startswith(('$2a$', '$2b$', '$2y$'))
 anna_password = 'sunshine'
 assert bcrypt.checkpw(anna_password.encode(), anna['passwordHash'].encode())
-normal = call('POST', '/documents/search', 200, 'anna', anna_password,
-              json={'organizationUuid': '786298a5-8c02-56ce-ba8f-d2b41ec3333c'})
-assert normal and {json.loads(doc['metadata'])['organizationUuid'] for doc in normal} == {'786298a5-8c02-56ce-ba8f-d2b41ec3333c'}
 assert call('POST', '/documents/search', 200, 'anna', anna_password,
-            json={'organizationUuid': '1ae53893-c399-57c3-ba32-16e55b435249'}) == []
-payload = "786298a5-8c02-56ce-ba8f-d2b41ec3333c' OR '1'='1"
+            json={'organizationUuid': organization_uuid}) == []
+payload = organization_uuid + "' OR '1'='1"
 injected = call('POST', '/documents/search', 200, 'anna', anna_password,
                 json={'organizationUuid': payload})
 organizations = {json.loads(doc['metadata'])['organizationUuid'] for doc in injected}
-assert {'786298a5-8c02-56ce-ba8f-d2b41ec3333c', '1ae53893-c399-57c3-ba32-16e55b435249', 'aa2262cf-c84c-5f89-8853-dc9b2ebb4a7b', '768fc845-aff9-5b32-b626-a8f05a8778d2',
-        'd3302858-83b5-5ec5-aba6-1f7c9da45bd0'} <= organizations
+assert len(organizations) >= 5
+assert organization_uuid not in organizations
 assert any('FLAG{archive-isolation-broken-by-converter}' in doc['content'] for doc in injected)
 assert call('POST', '/documents/search-safe', 200, 'anna', anna_password,
             json={'organizationUuid': payload}) == []

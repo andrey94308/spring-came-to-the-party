@@ -10,7 +10,7 @@ If this workspace still has containers or a database volume from an earlier vers
 docker compose up -d --build --wait
 ```
 
-The public gateway is at <http://localhost:8080>. Import [OrgArchive.postman_collection.json](postman/OrgArchive.postman_collection.json) into Postman and run its 10 requests in order. Anna's weak lab password is already set in the collection's `annaPassword` variable, so the presentation does not pause for a cracking step. Request 6 exposes the users' BCrypt hashes. The signup request generates a new username, password, and organization UUID each run.
+The public gateway is at <http://localhost:8080>. Import [OrgArchive.postman_collection.json](postman/OrgArchive.postman_collection.json) into Postman and run its 9 requests in order. Anna's weak lab password is already set in the collection's `annaPassword` variable, so the presentation does not pause for a cracking step. Request 6 exposes the users' BCrypt hashes. The signup request generates a new username, password, and organization UUID each run.
 
 If an older OrgArchive database volume contains the previous seed, run `make demo-reset` once before the new collection. This deletes and reseeds the lab database. An optional offline helper remains at `solve/crack_anna.py` for verifying the password against the leaked hash outside the live demo.
 
@@ -26,8 +26,8 @@ mvn -f services/archive-service/pom.xml -Dspring-security.version=6.4.4 -Ddemo.f
 
 1. The gateway's public API index lists routes. Anonymous `/users` returns `401`.
 2. A normal user signs up, receives an organization UUID, and sees an empty list of documents for that UUID.
-3. `/users` requires HTTP authentication, while its admin role rule lives on a generic controller interface. Spring Security 6.4.3 misses the inherited annotation ([CVE-2025-22223](https://spring.io/security/cve-2025-22223/)); a regular user reaches the admin-only user list. The `debug=true` response includes BCrypt hashes, an additional application-level data exposure. A directly annotated `/users/{username}` would still reject that user. Spring Security 6.4.4 rejects the list call too.
+3. `/users` requires HTTP authentication, while its admin role rule lives on a generic controller interface. Spring Security 6.4.3 misses the inherited annotation ([CVE-2025-22223](https://spring.io/security/cve-2025-22223/)); a regular user reaches the admin-only user list. The `debug=true` response includes BCrypt hashes, an additional application-level data exposure. Neither user response contains organization UUIDs. A directly annotated `/users/{username}` would still reject that user. Spring Security 6.4.4 rejects the list call too.
 4. Anna's deliberately weak password matches the leaked BCrypt hash. The collection already contains that lab password and uses Anna's account for document searches.
-5. Spring AI MariaDB Store 1.0.3 emits an unescaped metadata filter value ([CVE-2026-22730](https://spring.io/security/cve-2026-22730/)). The vulnerable document query returns records from other organizations. `/documents/search-safe` binds both values and preserves isolation.
+5. Anna searches with the newly registered user's UUID and receives no documents. Spring AI MariaDB Store 1.0.3 emits an unescaped metadata filter value ([CVE-2026-22730](https://spring.io/security/cve-2026-22730/)). Appending SQL to that known UUID makes the vulnerable query return documents and UUIDs from other organizations. `/documents/search-safe` binds both values and preserves isolation.
 
 Only the gateway publishes an application port. The archive and MariaDB stay inside Compose. All seeded data is fictional.
