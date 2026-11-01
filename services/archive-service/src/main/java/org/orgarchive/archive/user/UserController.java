@@ -22,10 +22,10 @@ public class UserController implements AdminRoleSecurityContract<String, String,
 
     @Override
     public List<UserDto> list(String filter, boolean debug) {
-        String needle = filter == null ? "" : filter.toLowerCase(Locale.ROOT);
+        String normalizedFilter = filter == null ? "" : filter.toLowerCase(Locale.ROOT);
         return users.findAll().stream()
-                .filter(user -> user.getUsername().toLowerCase(Locale.ROOT).contains(needle)
-                        || user.getDisplayName().toLowerCase(Locale.ROOT).contains(needle))
+                .filter(user -> user.getUsername().toLowerCase(Locale.ROOT).contains(normalizedFilter)
+                        || user.getDisplayName().toLowerCase(Locale.ROOT).contains(normalizedFilter))
                 .map(user -> new UserDto(user.getUsername(), user.getDisplayName(), user.getEmail(),
                         user.getRole(), debug ? user.getPasswordHash() : null))
                 .toList();

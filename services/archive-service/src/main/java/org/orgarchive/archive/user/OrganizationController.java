@@ -26,9 +26,9 @@ public class OrganizationController implements AdminRoleSecurityContract<String,
 
     @Override
     public List<OrganizationDto> list(String filter, boolean debug) {
-        String needle = filter == null ? "" : filter.toLowerCase(Locale.ROOT);
+        String normalizedFilter = filter == null ? "" : filter.toLowerCase(Locale.ROOT);
         return counts().entrySet().stream()
-                .filter(entry -> entry.getKey().toLowerCase(Locale.ROOT).contains(needle))
+                .filter(entry -> entry.getKey().toLowerCase(Locale.ROOT).contains(normalizedFilter))
                 .sorted(Map.Entry.comparingByKey())
                 .map(entry -> new OrganizationDto(entry.getKey(), debug ? entry.getValue() : null))
                 .toList();
