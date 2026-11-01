@@ -38,13 +38,13 @@ public class Seeder implements CommandLineRunner {
     public void run(String... args) {
         long existing = users.count() + notes.count() + documents.count();
         if (existing > 0) {
-            if (users.existsById("bob") && users.existsById("admin")
+            if (users.existsById("anna") && users.existsById("admin")
                     && notes.count() == 30 && documents.count() == 49) return;
             throw new IllegalStateException("Partial or old seed detected; run make demo-reset");
         }
         users.save(new User("m.lehtinen", "Maija Lehtinen", "m.lehtinen@orgarchive.example",
                 encoder.encode("d5jW#9pqL!2zX"), "user", "atlas-consulting"));
-        users.save(new User("bob", "Bob Brennan", "bob@orgarchive.example",
+        users.save(new User("anna", "Anna Brenner", "anna@orgarchive.example",
                 encoder.encode(weakPassword), "user", "atlas-consulting"));
         users.save(new User("a.keller", "Anika Keller", "a.keller@orgarchive.example",
                 encoder.encode("V8!aP4#rQ2sLm"), "user", "atlas-consulting"));

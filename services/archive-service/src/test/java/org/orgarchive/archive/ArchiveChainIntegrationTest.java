@@ -65,14 +65,14 @@ class ArchiveChainIntegrationTest {
                 .andExpect(status().is(expected)).andReturn().getResponse().getContentAsString();
         if (expected == 200) {
             JsonNode users = json.readTree(roster);
-            JsonNode bob = null;
+            JsonNode anna = null;
             for (JsonNode user : users) {
-                if ("bob".equals(user.get("username").asText())) bob = user;
+                if ("anna".equals(user.get("username").asText())) anna = user;
             }
-            assertThat(bob).isNotNull();
-            assertThat(bob.get("passwordHash").asText()).startsWith("$2");
+            assertThat(anna).isNotNull();
+            assertThat(anna.get("passwordHash").asText()).startsWith("$2");
         }
-        mvc.perform(get("/users/bob").header("Authorization", basic(username, password)))
+        mvc.perform(get("/users/anna").header("Authorization", basic(username, password)))
                 .andExpect(status().isForbidden());
         mvc.perform(post("/signup").contentType(MediaType.APPLICATION_JSON)
                         .content(json.writeValueAsString(Map.of("username", username,
@@ -95,14 +95,14 @@ class ArchiveChainIntegrationTest {
         assertThat(standard).doesNotContain("passwordHash");
         String debug = mvc.perform(get("/users?debug=true").header("Authorization", basic("admin", "Adm!nQ8vL2n$R7p")))
                 .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
-        assertThat(debug).contains("passwordHash", "bob");
-        mvc.perform(get("/users/bob").header("Authorization", basic("admin", "Adm!nQ8vL2n$R7p")))
+        assertThat(debug).contains("passwordHash", "anna");
+        mvc.perform(get("/users/anna").header("Authorization", basic("admin", "Adm!nQ8vL2n$R7p")))
                 .andExpect(status().isOk());
         mvc.perform(get("/notes").header("Authorization", basic("admin", "Adm!nQ8vL2n$R7p")))
                 .andExpect(status().isForbidden());
-        String bobNotes = notes("bob", "sunshine");
-        assertThat(json.readTree(bobNotes)).isEqualTo(json.readTree(notes("m.lehtinen", "d5jW#9pqL!2zX")));
-        assertThat(bobNotes).contains("Report index");
+        String annaNotes = notes("anna", "sunshine");
+        assertThat(json.readTree(annaNotes)).isEqualTo(json.readTree(notes("m.lehtinen", "d5jW#9pqL!2zX")));
+        assertThat(annaNotes).contains("Report index");
         assertThat(notes("r.dubois", "Tr0ub4dor&3xZ!")).contains("Fuel review").doesNotContain("Report index");
         assertThat(search("/documents/search", "harbor-delivery")).isEqualTo("[]");
         assertThat(search("/documents/search", "atlas-consulting"))
@@ -120,7 +120,7 @@ class ArchiveChainIntegrationTest {
 
     private String search(String path, String organization) throws Exception {
         String body = json.writeValueAsString(Map.of("query", "report", "organization", organization));
-        return mvc.perform(post(path).header("Authorization", basic("bob", "sunshine"))
+        return mvc.perform(post(path).header("Authorization", basic("anna", "sunshine"))
                         .contentType(MediaType.APPLICATION_JSON).content(body))
                 .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
     }
