@@ -12,40 +12,22 @@
         <relativePath/>
     </parent>
 
-    <groupId>org.mato</groupId>
+    <groupId>org.orgarchive</groupId>
     <artifactId>edge-gateway</artifactId>
     <version>0.1.0</version>
     <name>edge-gateway</name>
-    <description>Public edge of MATO. Spring Cloud Gateway. Vulnerable to CVE-2025-41243.</description>
+    <description>OrgArchive records edge gateway.</description>
 
     <properties>
         <java.version>21</java.version>
-        <!-- Spring Cloud 2024.0.0 manages Spring Cloud Gateway 4.2.x.
-             4.2.4 is the last vulnerable release on the 4.2 line for CVE-2025-41243. -->
-        <!-- Spring Cloud 2024.0.0 manages Spring Cloud Gateway 4.2.0 — also
-             vulnerable to CVE-2025-41243 (the entire 4.2.x line up to 4.2.5
-             is affected). We use the BOM's transitive 4.2.0 here. -->
         <spring-cloud.version>2024.0.0</spring-cloud.version>
     </properties>
 
     <dependencies>
-        <!-- spring-cloud-starter-gateway (the WebFlux flavor, vulnerable to
-             CVE-2025-41243) — the WebMVC variant lives at
-             spring-cloud-starter-gateway-mvc. Version comes from the BOM. -->
         <dependency>
             <groupId>org.springframework.cloud</groupId>
             <artifactId>spring-cloud-starter-gateway</artifactId>
         </dependency>
-
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-actuator</artifactId>
-        </dependency>
-
-        <!-- No springdoc on the gateway: it conflicts with Spring Cloud
-             Gateway's own actuator route registration (CVE PoC needs
-             /actuator/gateway/routes reachable). The archive- and
-             command-control services expose their own swagger-ui directly. -->
 
         <dependency>
             <groupId>org.springframework.boot</groupId>

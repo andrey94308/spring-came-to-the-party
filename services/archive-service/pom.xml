@@ -8,21 +8,18 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.4.5</version>
+        <version>3.4.3</version>
         <relativePath/>
     </parent>
 
-    <groupId>org.mato</groupId>
+    <groupId>org.orgarchive</groupId>
     <artifactId>archive-service</artifactId>
     <version>0.1.0</version>
     <name>archive-service</name>
-    <description>MATO archive service behind the edge-gateway: /users, /notes, /documents/search.</description>
+    <description>OrgArchive records service behind the edge-gateway: /users, /notes, /documents/search.</description>
 
     <properties>
         <java.version>21</java.version>
-        <!-- CVE-2025-22234: 6.4.4 is the vulnerable release on the 6.4 line.
-             Spring Boot 3.4.5 manages 6.4.5 (post-fix) by default, so we override here. -->
-        <spring-security.version>6.4.4</spring-security.version>
         <spring-ai.version>1.0.3</spring-ai.version>
     </properties>
 
@@ -32,10 +29,6 @@
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
 
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-actuator</artifactId>
-        </dependency>
 
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -73,13 +66,6 @@
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
             <optional>true</optional>
-        </dependency>
-
-        <!-- OpenAPI / Swagger UI for the WebMVC archive service. -->
-        <dependency>
-            <groupId>org.springdoc</groupId>
-            <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
-            <version>2.6.0</version>
         </dependency>
 
         <!-- Test dependencies -->
@@ -125,15 +111,6 @@
             </dependency>
         </dependencies>
     </dependencyManagement>
-
-    <repositories>
-        <repository>
-            <id>spring-milestones</id>
-            <name>Spring Milestones</name>
-            <url>https://repo.spring.io/milestone</url>
-            <snapshots><enabled>false</enabled></snapshots>
-        </repository>
-    </repositories>
 
     <build>
         <plugins>

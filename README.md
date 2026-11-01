@@ -1,87 +1,38 @@
-# Spring Came to the Party
+# OrgArchive
 
-A deliberately vulnerable Spring demo for security knowledge sharing.
+A local records platform for several organizations. People can create a workspace, share notes with colleagues, and search their organization's documents. This lab demonstrates two independent library vulnerabilities in one Postman chain: a Spring Security method-authorization bypass and a Spring AI SQL injection.
 
-## Scenario
+## Run
 
-The President's AI assistant has accidentally leaked some classified material into a public repository. Your job is to follow the trail, escalate through MATO's network, and recover the nuclear launch codes before someone less friendly does.
-
-There are **four flags**. Find them all.
-
-## Getting Started
-
-```bash
-make build
-make test-local
-```
-
-You will need:
-
-- Docker (with `docker compose` v2)
-- `make`
-
-Python is included in the `demo-runner` container and is not required on the host.
-
-## Make Targets
-
-| Target            | What it does                                                    |
-| ----------------- | --------------------------------------------------------------- |
-| `make clean`      | Stop containers, remove volumes, clean Maven build output       |
-| `make build`      | Build all Docker images                                         |
-| `make test-java`  | Run per-module Java unit/integration tests                      |
-| `make test-local` | Bring up the stack and run the end-to-end solve script          |
-| `make demo`       | Run the interactive presentation flow against the running stack |
-
-On Windows, the same demo can be run without `make`:
+If this workspace still has containers or a database volume from an earlier version, run `make demo-reset` once. This deletes that lab database and starts OrgArchive with a fresh schema and seed. For a fresh checkout, use:
 
 ```bash
 docker compose up -d --build --wait
-docker compose --profile demo build demo-runner
-docker compose --profile demo run --rm demo-runner
 ```
 
-For a non-interactive check of all four stages, replace the last command with:
+The public gateway is at <http://localhost:8080>. Import [OrgArchive.postman_collection.json](postman/OrgArchive.postman_collection.json) into Postman and run the requests in order. After request 8, copy Bob's `passwordHash` and recover the lab password offline:
 
 ```bash
-docker compose --profile demo run --rm demo-runner python solve/solve_all.py
+python3 -m pip install -r solve/requirements.txt
+python3 solve/crack_bob.py '$2a$10$...'
 ```
 
-## Stack
+Set the recovered value in the collection's local `bobPassword` variable, then continue. The signup request generates a new visitor username and password each run.
 
-- Java 21 + Spring Boot 3.4.5 (Maven)
-- Spring Cloud Gateway 4.2.0 (CVE-2025-41243)
-- Spring Security 6.4.4 (CVE-2025-22234)
-- Spring AI MariaDB Store 1.0.3 (CVE-2026-22730)
-- MariaDB 11.4
-- Docker Compose
+`make demo-reset` deletes the lab database volume and reseeds it. `make test-java` runs the Java tests. `make test-local` starts Compose and verifies the complete HTTP chain with `postman/check_demo.py` (requires `solve/requirements.txt`).
 
-## Repository Layout
+To compare the authorization behavior with the fixed Spring Security release:
 
-```
-.
-├── services/
-│   ├── edge-gateway/        # Public-facing Spring Cloud Gateway (port 8080)
-│   ├── archive-service/     # /users, /notes, /documents/search (port 8081, internal)
-│   └── command-control/     # /login, /verify-otp, /warheads (port 8082)
-├── infra/
-│   └── mariadb/             # MariaDB init SQL
-├── solve/                   # Python solve scripts (one per flag, plus solve_all.py)
-└── docs/                    # Architecture, exploit-flow diagrams, working notes
+```bash
+mvn -f services/archive-service/pom.xml -Dspring-security.version=6.4.4 -Ddemo.fixed-security=true -Dtest=ArchiveChainIntegrationTest test
 ```
 
-## Browse the APIs
+## Chain
 
-Once the stack is running (`make up`):
+1. The gateway's public API index lists routes. Anonymous `/users` and `/notes` return `401`.
+2. The visitor signs up for a new organization. Own notes are empty; another organization's notes return `403`.
+3. `/users` requires HTTP authentication, while its admin role rule lives on a generic controller interface. Spring Security 6.4.3 misses the inherited annotation ([CVE-2025-22223](https://spring.io/security/cve-2025-22223/)); a regular user reaches the admin listing. The debug response includes BCrypt hashes, an additional application-level data exposure. A directly annotated `/users/{username}` still rejects that user. Spring Security 6.4.4 rejects the list call too.
+4. Bob's deliberately weak password is recovered from his hash. Bob and Maija see the same organization notes.
+5. Spring AI MariaDB Store 1.0.3 emits an unescaped metadata filter value ([CVE-2026-22730](https://spring.io/security/cve-2026-22730/)). The vulnerable document query returns records from other organizations. `/documents/search-safe` binds both values and preserves isolation.
 
-| Service         | OpenAPI                             | Swagger UI                              |
-| --------------- | ----------------------------------- | --------------------------------------- |
-| edge-gateway    | <http://localhost:8080/v3/api-docs> | <http://localhost:8080/swagger-ui.html> |
-| command-control | <http://localhost:8082/v3/api-docs> | <http://localhost:8082/swagger-ui.html> |
-
-The archive-service is internal-only on the docker network; players reach it through the edge-gateway.
-
-## Documentation
-
-- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — service map, inter-service contracts, trust model.
-- [`docs/EXPLOIT-FLOWS.md`](docs/EXPLOIT-FLOWS.md) — sequence diagram per flag.
-- [`docs/notes.md`](docs/notes.md) — working journal with implementation notes and test results.
+Only the gateway publishes an application port. The archive and MariaDB stay inside Compose. All seeded data is fictional.

@@ -1,0 +1,161 @@
+package org.orgarchive.archive.seed;
+
+import java.util.List;
+import org.orgarchive.archive.document.Document;
+import org.orgarchive.archive.document.DocumentRepository;
+import org.orgarchive.archive.note.Note;
+import org.orgarchive.archive.note.NoteRepository;
+import org.orgarchive.archive.user.User;
+import org.orgarchive.archive.user.UserRepository;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.CommandLineRunner;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
+
+@Component
+public class Seeder implements CommandLineRunner {
+    private final UserRepository users;
+    private final NoteRepository notes;
+    private final DocumentRepository documents;
+    private final PasswordEncoder encoder;
+    private final String weakPassword;
+    private final String finalFlag;
+
+    public Seeder(UserRepository users, NoteRepository notes, DocumentRepository documents,
+                  PasswordEncoder encoder, @Value("${seed.weak-password}") String weakPassword,
+                  @Value("${seed.final-flag}") String finalFlag) {
+        this.users = users;
+        this.notes = notes;
+        this.documents = documents;
+        this.encoder = encoder;
+        this.weakPassword = weakPassword;
+        this.finalFlag = finalFlag;
+    }
+
+    @Override
+    @Transactional
+    public void run(String... args) {
+        long existing = users.count() + notes.count() + documents.count();
+        if (existing > 0) {
+            if (users.existsById("bob") && users.existsById("admin")
+                    && notes.count() == 30 && documents.count() == 49) return;
+            throw new IllegalStateException("Partial or old seed detected; run make demo-reset");
+        }
+        users.save(new User("m.lehtinen", "Maija Lehtinen", "m.lehtinen@orgarchive.example",
+                encoder.encode("d5jW#9pqL!2zX"), "user", "atlas-consulting"));
+        users.save(new User("bob", "Bob Brennan", "bob@orgarchive.example",
+                encoder.encode(weakPassword), "user", "atlas-consulting"));
+        users.save(new User("a.keller", "Anika Keller", "a.keller@orgarchive.example",
+                encoder.encode("V8!aP4#rQ2sLm"), "user", "atlas-consulting"));
+        users.save(new User("s.cho", "Sora Cho", "s.cho@orgarchive.example",
+                encoder.encode("Q6^tN9@xC3wBv"), "user", "atlas-consulting"));
+        users.save(new User("j.ortega", "Jules Ortega", "j.ortega@orgarchive.example",
+                encoder.encode("M2%fK7!zT5nYp"), "user", "atlas-consulting"));
+        users.save(new User("r.dubois", "Renaud Dubois", "r.dubois@orgarchive.example",
+                encoder.encode("Tr0ub4dor&3xZ!"), "user", "harbor-delivery"));
+        users.save(new User("l.meyer", "Lena Meyer", "l.meyer@orgarchive.example",
+                encoder.encode("F7!qD2#vH9mRx"), "user", "harbor-delivery"));
+        users.save(new User("p.ahmed", "Parvez Ahmed", "p.ahmed@orgarchive.example",
+                encoder.encode("N4@kS8^aL1tWz"), "user", "harbor-delivery"));
+        users.save(new User("e.rossi", "Elena Rossi", "e.rossi@orgarchive.example",
+                encoder.encode("C9%xG3!pJ6bUa"), "user", "harbor-delivery"));
+        users.save(new User("admin", "Platform Administrator", "admin@orgarchive.example",
+                encoder.encode("Adm!nQ8vL2n$R7p"), "admin", "cedar-partners"));
+        users.save(new User("c.wright", "Clara Wright", "c.wright@orgarchive.example",
+                encoder.encode("R5@hV2#sK8dPm"), "user", "cedar-partners"));
+        users.save(new User("t.sato", "Taro Sato", "t.sato@orgarchive.example",
+                encoder.encode("B4!nY7^fD1qZx"), "user", "cedar-partners"));
+        users.save(new User("i.novak", "Irena Novak", "i.novak@orgarchive.example",
+                encoder.encode("J8%wC3@rM6aTs"), "user", "cedar-partners"));
+        users.save(new User("o.martin", "Owen Martin", "o.martin@orgarchive.example",
+                encoder.encode("P2#zL9!cV4hQy"), "user", "cedar-partners"));
+        users.save(new User("n.okafor", "Nia Okafor", "n.okafor@orgarchive.example",
+                encoder.encode("X7@tF3^mB9kRz"), "user", "siteworks-group"));
+        users.save(new User("d.berg", "Daniel Berg", "d.berg@orgarchive.example",
+                encoder.encode("A6!vW2#qH8nLp"), "user", "siteworks-group"));
+        users.save(new User("k.silva", "Kira Silva", "k.silva@orgarchive.example",
+                encoder.encode("E4%yJ9@pT1dSc"), "user", "siteworks-group"));
+        users.save(new User("v.hale", "Victor Hale", "v.hale@orgarchive.example",
+                encoder.encode("U3#bN7!xG5rMw"), "user", "siteworks-group"));
+        notes.save(new Note("atlas-consulting", "Standup", "Daily reminder: keep client identifiers out of meeting notes."));
+        notes.save(new Note("atlas-consulting", "Morning thoughts", "The document archive is easier to navigate by organization. Try document search after this handover."));
+        notes.save(new Note("atlas-consulting", "Collection priorities", "Review the northern corridor reports before the weekly meeting."));
+        notes.save(new Note("atlas-consulting", "Contact hygiene", "Use the approved contact roster for external calls."));
+        notes.save(new Note("atlas-consulting", "Desk handover", "The next shift owns the Q1 research review updates."));
+        notes.save(new Note("atlas-consulting", "Translation queue", "Three foreign-language summaries await review."));
+        notes.save(new Note("atlas-consulting", "Report index", "Search the archive with the atlas-consulting organization filter."));
+        notes.save(new Note("atlas-consulting", "Consultant rota", "Pair new consultants with a reviewer for initial reports."));
+        notes.save(new Note("atlas-consulting", "Archive reminder", "Metadata is part of the document index; check it when filing."));
+        notes.save(new Note("harbor-delivery", "Pickup list", "Order more printer paper for the regional depots."));
+        notes.save(new Note("harbor-delivery", "Fuel review", "Depot forecasts are due on Friday."));
+        notes.save(new Note("harbor-delivery", "Fleet rota", "Confirm vehicle assignments before dispatch."));
+        notes.save(new Note("harbor-delivery", "Warehouse count", "Reconcile the south warehouse inventory."));
+        notes.save(new Note("harbor-delivery", "Vendor calls", "Use approved purchasing channels for spare parts."));
+        notes.save(new Note("harbor-delivery", "Shift notes", "Two delivery windows changed this morning."));
+        notes.save(new Note("harbor-delivery", "Maintenance", "Inspect generators at the site hub."));
+        notes.save(new Note("cedar-partners", "Report template", "Use the latest cedar-partners report template."));
+        notes.save(new Note("cedar-partners", "Meeting room", "Reserve the conference room for Tuesday."));
+        notes.save(new Note("cedar-partners", "Review queue", "Three policy memos await signature."));
+        notes.save(new Note("cedar-partners", "Travel desk", "Confirm travel requests with projects."));
+        notes.save(new Note("cedar-partners", "Protocol", "Archive the final meeting agenda."));
+        notes.save(new Note("cedar-partners", "Calendar", "Coordinate next month’s planning session."));
+        notes.save(new Note("cedar-partners", "Minutes", "Distribute the approved minutes to staff."));
+        notes.save(new Note("siteworks-group", "Site visit plan", "Review the site rota before departure."));
+        notes.save(new Note("siteworks-group", "Equipment check", "Confirm batteries and spare headsets."));
+        notes.save(new Note("siteworks-group", "Weather watch", "Update route plans for changing conditions."));
+        notes.save(new Note("siteworks-group", "Supply pickup", "Collect the approved equipment kit."));
+        notes.save(new Note("siteworks-group", "Site report", "Submit daily observations to the archive."));
+        notes.save(new Note("siteworks-group", "Team handover", "Brief the incoming shift at 18:00."));
+        notes.save(new Note("siteworks-group", "Vehicle log", "Record mileage after every trip."));
+        documents.save(new Document("Atlas Consulting — Quarterly Research Review", "Archive record 1 for atlas-consulting. Approved internal reference material.", "{\"organization\":\"atlas-consulting\",\"category\":\"report\",\"revision\":1}"));
+        documents.save(new Document("Client Contact Roster — Atlas Consulting", "Archive record 2 for atlas-consulting. Approved internal reference material.", "{\"organization\":\"atlas-consulting\",\"category\":\"reference\",\"revision\":2}"));
+        documents.save(new Document("Northern Region Brief", "Archive record 3 for atlas-consulting. Approved internal reference material.", "{\"organization\":\"atlas-consulting\",\"category\":\"projects\",\"revision\":3}"));
+        documents.save(new Document("Regional Signals Summary", "Archive record 4 for atlas-consulting. Approved internal reference material.", "{\"organization\":\"atlas-consulting\",\"category\":\"report\",\"revision\":4}"));
+        documents.save(new Document("Desk Handover Memo", "Archive record 5 for atlas-consulting. Approved internal reference material.", "{\"organization\":\"atlas-consulting\",\"category\":\"reference\",\"revision\":5}"));
+        documents.save(new Document("Open Source Digest", "Archive record 6 for atlas-consulting. Approved internal reference material.", "{\"organization\":\"atlas-consulting\",\"category\":\"projects\",\"revision\":6}"));
+        documents.save(new Document("Consultant Review Checklist", "Archive record 7 for atlas-consulting. Approved internal reference material.", "{\"organization\":\"atlas-consulting\",\"category\":\"report\",\"revision\":7}"));
+        documents.save(new Document("Translation Index", "Archive record 8 for atlas-consulting. Approved internal reference material.", "{\"organization\":\"atlas-consulting\",\"category\":\"reference\",\"revision\":8}"));
+        documents.save(new Document("Maritime Pattern Note", "Archive record 9 for atlas-consulting. Approved internal reference material.", "{\"organization\":\"atlas-consulting\",\"category\":\"projects\",\"revision\":9}"));
+        documents.save(new Document("Quarterly Risk Matrix", "Archive record 10 for atlas-consulting. Approved internal reference material.", "{\"organization\":\"atlas-consulting\",\"category\":\"report\",\"revision\":10}"));
+        documents.save(new Document("Regional Activity Summary", "Archive record 11 for atlas-consulting. Approved internal reference material.", "{\"organization\":\"atlas-consulting\",\"category\":\"reference\",\"revision\":11}"));
+        documents.save(new Document("Collection Request Log", "Archive record 12 for atlas-consulting. Approved internal reference material.", "{\"organization\":\"atlas-consulting\",\"category\":\"projects\",\"revision\":12}"));
+        documents.save(new Document("Market Trends Appendix", "Archive record 13 for atlas-consulting. Approved internal reference material.", "{\"organization\":\"atlas-consulting\",\"category\":\"report\",\"revision\":13}"));
+        documents.save(new Document("Harbor Delivery — Rotation Schedule", "Archive record 1 for harbor-delivery. Approved internal reference material.", "{\"organization\":\"harbor-delivery\",\"category\":\"report\",\"revision\":1}"));
+        documents.save(new Document("Harbor Delivery — Fuel Reserves", "Archive record 2 for harbor-delivery. Approved internal reference material.", "{\"organization\":\"harbor-delivery\",\"category\":\"reference\",\"revision\":2}"));
+        documents.save(new Document("Depot Inventory Sheet", "Archive record 3 for harbor-delivery. Approved internal reference material.", "{\"organization\":\"harbor-delivery\",\"category\":\"projects\",\"revision\":3}"));
+        documents.save(new Document("Supply Route Overview", "Archive record 4 for harbor-delivery. Approved internal reference material.", "{\"organization\":\"harbor-delivery\",\"category\":\"report\",\"revision\":4}"));
+        documents.save(new Document("Fleet Maintenance Plan", "Archive record 5 for harbor-delivery. Approved internal reference material.", "{\"organization\":\"harbor-delivery\",\"category\":\"reference\",\"revision\":5}"));
+        documents.save(new Document("Warehouse Audit Notes", "Archive record 6 for harbor-delivery. Approved internal reference material.", "{\"organization\":\"harbor-delivery\",\"category\":\"projects\",\"revision\":6}"));
+        documents.save(new Document("Vendor Approval Register", "Archive record 7 for harbor-delivery. Approved internal reference material.", "{\"organization\":\"harbor-delivery\",\"category\":\"report\",\"revision\":7}"));
+        documents.save(new Document("Spare Parts Forecast", "Archive record 8 for harbor-delivery. Approved internal reference material.", "{\"organization\":\"harbor-delivery\",\"category\":\"reference\",\"revision\":8}"));
+        documents.save(new Document("Regional Delivery Calendar", "Archive record 9 for harbor-delivery. Approved internal reference material.", "{\"organization\":\"harbor-delivery\",\"category\":\"projects\",\"revision\":9}"));
+        documents.save(new Document("Generator Service Log", "Archive record 10 for harbor-delivery. Approved internal reference material.", "{\"organization\":\"harbor-delivery\",\"category\":\"report\",\"revision\":10}"));
+        documents.save(new Document("Purchasing Summary", "Archive record 11 for harbor-delivery. Approved internal reference material.", "{\"organization\":\"harbor-delivery\",\"category\":\"reference\",\"revision\":11}"));
+        documents.save(new Document("Cedar Partners — Meeting Template", "Archive record 1 for cedar-partners. Approved internal reference material.", "{\"organization\":\"cedar-partners\",\"category\":\"report\",\"revision\":1}"));
+        documents.save(new Document("Policy Review Calendar", "Archive record 2 for cedar-partners. Approved internal reference material.", "{\"organization\":\"cedar-partners\",\"category\":\"reference\",\"revision\":2}"));
+        documents.save(new Document("Leadership Meeting Minutes", "Archive record 3 for cedar-partners. Approved internal reference material.", "{\"organization\":\"cedar-partners\",\"category\":\"projects\",\"revision\":3}"));
+        documents.save(new Document("Communications Protocol", "Archive record 4 for cedar-partners. Approved internal reference material.", "{\"organization\":\"cedar-partners\",\"category\":\"report\",\"revision\":4}"));
+        documents.save(new Document("Planning Cycle Overview", "Archive record 5 for cedar-partners. Approved internal reference material.", "{\"organization\":\"cedar-partners\",\"category\":\"reference\",\"revision\":5}"));
+        documents.save(new Document("Travel Approval Guide", "Archive record 6 for cedar-partners. Approved internal reference material.", "{\"organization\":\"cedar-partners\",\"category\":\"projects\",\"revision\":6}"));
+        documents.save(new Document("Budget Review Summary", "Archive record 7 for cedar-partners. Approved internal reference material.", "{\"organization\":\"cedar-partners\",\"category\":\"report\",\"revision\":7}"));
+        documents.save(new Document("Secure Room Schedule", "Archive record 8 for cedar-partners. Approved internal reference material.", "{\"organization\":\"cedar-partners\",\"category\":\"reference\",\"revision\":8}"));
+        documents.save(new Document("Records Retention Memo", "Archive record 9 for cedar-partners. Approved internal reference material.", "{\"organization\":\"cedar-partners\",\"category\":\"projects\",\"revision\":9}"));
+        documents.save(new Document("Training Agenda", "Archive record 10 for cedar-partners. Approved internal reference material.", "{\"organization\":\"cedar-partners\",\"category\":\"report\",\"revision\":10}"));
+        documents.save(new Document("Weekly Decision Log", "Archive record 11 for cedar-partners. Approved internal reference material.", "{\"organization\":\"cedar-partners\",\"category\":\"reference\",\"revision\":11}"));
+        documents.save(new Document("Site Team Rota", "Archive record 1 for siteworks-group. Approved internal reference material.", "{\"organization\":\"siteworks-group\",\"category\":\"report\",\"revision\":1}"));
+        documents.save(new Document("Site Visit Overview", "Archive record 2 for siteworks-group. Approved internal reference material.", "{\"organization\":\"siteworks-group\",\"category\":\"reference\",\"revision\":2}"));
+        documents.save(new Document("Equipment Issue Register", "Archive record 3 for siteworks-group. Approved internal reference material.", "{\"organization\":\"siteworks-group\",\"category\":\"projects\",\"revision\":3}"));
+        documents.save(new Document("Radio Check Procedure", "Archive record 4 for siteworks-group. Approved internal reference material.", "{\"organization\":\"siteworks-group\",\"category\":\"report\",\"revision\":4}"));
+        documents.save(new Document("Weather Contingency Plan", "Archive record 5 for siteworks-group. Approved internal reference material.", "{\"organization\":\"siteworks-group\",\"category\":\"reference\",\"revision\":5}"));
+        documents.save(new Document("Observation Report Template", "Archive record 6 for siteworks-group. Approved internal reference material.", "{\"organization\":\"siteworks-group\",\"category\":\"projects\",\"revision\":6}"));
+        documents.save(new Document("Vehicle Inspection Form", "Archive record 7 for siteworks-group. Approved internal reference material.", "{\"organization\":\"siteworks-group\",\"category\":\"report\",\"revision\":7}"));
+        documents.save(new Document("Site Safety Bulletin", "Archive record 8 for siteworks-group. Approved internal reference material.", "{\"organization\":\"siteworks-group\",\"category\":\"reference\",\"revision\":8}"));
+        documents.save(new Document("Shift Handover Guide", "Archive record 9 for siteworks-group. Approved internal reference material.", "{\"organization\":\"siteworks-group\",\"category\":\"projects\",\"revision\":9}"));
+        documents.save(new Document("Regional Projects Map", "Archive record 10 for siteworks-group. Approved internal reference material.", "{\"organization\":\"siteworks-group\",\"category\":\"report\",\"revision\":10}"));
+        documents.save(new Document("Project Calendar", "Archive record 11 for siteworks-group. Approved internal reference material.", "{\"organization\":\"siteworks-group\",\"category\":\"reference\",\"revision\":11}"));
+        documents.save(new Document("Meridian Legal — Confidential Client File", finalFlag + "\nArchive isolation failure confirmed.", "{\"organization\":\"meridian-legal\",\"category\":\"report\",\"revision\":1}"));
+        documents.save(new Document("Client Routing Note", "Archive record 2 for meridian-legal. Approved internal reference material.", "{\"organization\":\"meridian-legal\",\"category\":\"reference\",\"revision\":2}"));
+        documents.save(new Document("Confidential Records Index", "Archive record 3 for meridian-legal. Approved internal reference material.", "{\"organization\":\"meridian-legal\",\"category\":\"projects\",\"revision\":3}"));
+    }
+}

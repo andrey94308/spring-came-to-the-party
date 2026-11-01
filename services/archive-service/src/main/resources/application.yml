@@ -6,9 +6,9 @@ spring:
     name: archive-service
 
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:mariadb://localhost:3306/sctp}
-    username: ${SPRING_DATASOURCE_USERNAME:sctp}
-    password: ${SPRING_DATASOURCE_PASSWORD:sctp}
+    url: ${SPRING_DATASOURCE_URL:jdbc:mariadb://localhost:3306/orgarchive}
+    username: ${SPRING_DATASOURCE_USERNAME:orgarchive}
+    password: ${SPRING_DATASOURCE_PASSWORD:orgarchive}
     driver-class-name: org.mariadb.jdbc.Driver
 
   jpa:
@@ -19,30 +19,10 @@ spring:
         dialect: org.hibernate.dialect.MariaDBDialect
         show_sql: false
 
-management:
-  endpoints:
-    web:
-      exposure:
-        include: health,info
-
-# Flag values are injected from the environment at runtime.
-flags:
-  flag1: ${FLAG_1:FLAG{flag1-not-set}}
-  flag2: ${FLAG_2:FLAG{flag2-not-set}}
-  flag3: ${FLAG_3:FLAG{flag3-not-set}}
-
 seed:
   weak-password: ${WEAK_USER_PASSWORD:sunshine}
-  command-url: ${COMMAND_URL:http://command-control:8082}
-  command-president-password: ${COMMAND_PRESIDENT_PASSWORD:Th3.Pr3sident's_Password!2026}
-
-springdoc:
-  api-docs:
-    path: /v3/api-docs
-  swagger-ui:
-    path: /swagger-ui.html
+  final-flag: ${FINAL_FLAG:FLAG{archive-isolation-broken-by-converter}}
 
 logging:
   level:
     root: INFO
-    org.hibernate.SQL: WARN
