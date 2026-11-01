@@ -119,7 +119,7 @@ class ArchiveChainIntegrationTest {
     }
 
     private String search(String path, String organization) throws Exception {
-        String body = json.writeValueAsString(Map.of("query", "report", "organization", organization));
+        String body = json.writeValueAsString(Map.of("organization", organization));
         return mvc.perform(post(path).header("Authorization", basic("anna", "sunshine"))
                         .contentType(MediaType.APPLICATION_JSON).content(body))
                 .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();

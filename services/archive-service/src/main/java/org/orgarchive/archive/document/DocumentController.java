@@ -40,7 +40,7 @@ public class DocumentController {
         this.users = users;
     }
 
-    public record SearchRequest(String query, String organization) {}
+    public record SearchRequest(String organization) {}
 
     public record DocumentDto(Long id, String title, String content, String metadata) {}
 

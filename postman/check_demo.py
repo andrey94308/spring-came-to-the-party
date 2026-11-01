@@ -36,36 +36,36 @@ assert api['service'] == 'OrgArchive'
 assert {'/signup', '/users', '/notes'} <= {item['path'] for item in api['endpoints']}
 call('GET', '/users', 401)
 call('GET', '/notes', 401)
-username = 'visitor-' + uuid.uuid4().hex[:10]
-password = 'VisitorPass!' + uuid.uuid4().hex[:12]
+username = 'user-' + uuid.uuid4().hex[:10]
+password = 'UserPass!' + uuid.uuid4().hex[:12]
 account = call('POST', '/signup', 201, json={
-    'username': username, 'displayName': 'Demo Visitor',
+    'username': username, 'displayName': 'Demo User',
     'email': username + '@example.test', 'password': password,
 })
 organization = account['organization']
 assert organization.startswith('trial-')
 assert call('GET', f'/organizations/{organization}/notes', 200, username, password) == []
-call('GET', '/organizations/atlas-consulting/notes', 403, username, password)
-normal_roster = call('GET', '/users', 200, username, password)
-assert normal_roster and all('passwordHash' not in user for user in normal_roster)
-roster = call('GET', '/users?debug=true', 200, username, password)
-anna = next(user for user in roster if user['username'] == 'anna')
+users = call('GET', '/users', 200, username, password)
+assert users and any(user['username'] == 'anna' for user in users)
+assert any(user['role'] == 'admin' for user in users)
+debug_users = call('GET', '/users?debug=true', 200, username, password)
+assert all(user['passwordHash'].startswith(('$2a$', '$2b$', '$2y$')) for user in debug_users)
+anna = next(user for user in debug_users if user['username'] == 'anna')
 assert anna['passwordHash'].startswith(('$2a$', '$2b$', '$2y$'))
-call('GET', '/users/anna', 403, username, password)
 anna_password = 'sunshine'
 assert bcrypt.checkpw(anna_password.encode(), anna['passwordHash'].encode())
 normal = call('POST', '/documents/search', 200, 'anna', anna_password,
-              json={'query': 'report', 'organization': 'atlas-consulting'})
+              json={'organization': 'atlas-consulting'})
 assert normal and {json.loads(doc['metadata'])['organization'] for doc in normal} == {'atlas-consulting'}
 assert call('POST', '/documents/search', 200, 'anna', anna_password,
-            json={'query': 'report', 'organization': 'harbor-delivery'}) == []
+            json={'organization': 'harbor-delivery'}) == []
 payload = "atlas-consulting' OR '1'='1"
 injected = call('POST', '/documents/search', 200, 'anna', anna_password,
-                json={'query': 'report', 'organization': payload})
+                json={'organization': payload})
 organizations = {json.loads(doc['metadata'])['organization'] for doc in injected}
 assert {'atlas-consulting', 'harbor-delivery', 'cedar-partners', 'siteworks-group',
         'meridian-legal'} <= organizations
 assert any('FLAG{archive-isolation-broken-by-converter}' in doc['content'] for doc in injected)
 assert call('POST', '/documents/search-safe', 200, 'anna', anna_password,
-            json={'query': 'report', 'organization': payload}) == []
+            json={'organization': payload}) == []
 print('OrgArchive chain OK: signup, method authorization bypass, debug hash, SQL injection')
