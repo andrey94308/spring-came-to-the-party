@@ -71,7 +71,12 @@ class ArchiveChainIntegrationTest {
             assertThat(anna.has("organizationUuid")).isFalse();
         }
         mvc.perform(get("/users/anna").header("Authorization", basic(username, password)))
-                .andExpect(status().isForbidden());
+                .andExpect(status().is(expected));
+        mvc.perform(get("/organizations").header("Authorization", basic(username, password)))
+                .andExpect(status().is(expected));
+        mvc.perform(get("/organizations/" + organizationUuid)
+                        .header("Authorization", basic(username, password)))
+                .andExpect(status().is(expected));
         mvc.perform(post("/signup").contentType(MediaType.APPLICATION_JSON)
                         .content(json.writeValueAsString(Map.of("username", username,
                                 "displayName", "Duplicate", "email", "duplicate@example.test",
@@ -99,6 +104,15 @@ class ArchiveChainIntegrationTest {
                         .header("Authorization", basic("admin", "Adm!nQ8vL2n$R7p")))
                 .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
         assertThat(direct).doesNotContain("organizationUuid");
+        String organizations = mvc.perform(get("/organizations")
+                        .header("Authorization", basic("admin", "Adm!nQ8vL2n$R7p")))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        assertThat(organizations).contains("786298a5-8c02-56ce-ba8f-d2b41ec3333c")
+                .doesNotContain("accountCount");
+        String organization = mvc.perform(get("/organizations/786298a5-8c02-56ce-ba8f-d2b41ec3333c")
+                        .header("Authorization", basic("admin", "Adm!nQ8vL2n$R7p")))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        assertThat(organization).contains("accountCount");
         String annaUuid = "786298a5-8c02-56ce-ba8f-d2b41ec3333c";
         String foreignUuid = UUID.randomUUID().toString();
         assertThat(search("/documents/search", foreignUuid)).isEqualTo("[]");

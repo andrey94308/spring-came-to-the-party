@@ -17,4 +17,9 @@ class GatewayActuatorExposureTest {
         client.get().uri("/actuator/gateway/routes").exchange().expectStatus().isNotFound();
         client.get().uri("/actuator/env").exchange().expectStatus().isNotFound();
     }
+    @Test void internalOrganizationRoutesAreNotPublished() {
+        client.get().uri("/organizations").exchange().expectStatus().isNotFound();
+        client.get().uri("/organizations/786298a5-8c02-56ce-ba8f-d2b41ec3333c")
+                .exchange().expectStatus().isNotFound();
+    }
 }

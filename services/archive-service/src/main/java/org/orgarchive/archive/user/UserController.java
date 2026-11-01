@@ -4,8 +4,6 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import java.util.List;
 import java.util.Locale;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -13,7 +11,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 @RestController
 @RequestMapping("/users")
-public class UserController implements AdminQuery<String, UserController.UserDto> {
+public class UserController implements AdminRoleSecurityContract<String, String, UserController.UserDto> {
     private final UserRepository users;
 
     public UserController(UserRepository users) { this.users = users; }
@@ -33,9 +31,8 @@ public class UserController implements AdminQuery<String, UserController.UserDto
                 .toList();
     }
 
-    @GetMapping("/{username}")
-    @PreAuthorize("hasRole('ADMIN')")
-    public UserDto get(@PathVariable String username) {
+    @Override
+    public UserDto get(@PathVariable("id") String username) {
         User user = users.findById(username)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
         return new UserDto(user.getUsername(), user.getDisplayName(), user.getEmail(),
