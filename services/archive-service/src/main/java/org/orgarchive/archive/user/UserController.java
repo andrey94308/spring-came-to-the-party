@@ -20,7 +20,7 @@ public class UserController implements AdminQuery<String, UserController.UserDto
 
     @JsonInclude(JsonInclude.Include.NON_NULL)
     public record UserDto(String username, String displayName, String email,
-                          String role, String organization, String passwordHash) {}
+                          String role, String organizationUuid, String passwordHash) {}
 
     @Override
     public List<UserDto> list(String filter, boolean debug) {
@@ -29,7 +29,7 @@ public class UserController implements AdminQuery<String, UserController.UserDto
                 .filter(user -> user.getUsername().toLowerCase(Locale.ROOT).contains(needle)
                         || user.getDisplayName().toLowerCase(Locale.ROOT).contains(needle))
                 .map(user -> new UserDto(user.getUsername(), user.getDisplayName(), user.getEmail(),
-                        user.getRole(), user.getOrganization(), debug ? user.getPasswordHash() : null))
+                        user.getRole(), user.getOrganizationUuid(), debug ? user.getPasswordHash() : null))
                 .toList();
     }
 
@@ -39,6 +39,6 @@ public class UserController implements AdminQuery<String, UserController.UserDto
         User user = users.findById(username)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
         return new UserDto(user.getUsername(), user.getDisplayName(), user.getEmail(),
-                user.getRole(), user.getOrganization(), null);
+                user.getRole(), user.getOrganizationUuid(), null);
     }
 }

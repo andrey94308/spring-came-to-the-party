@@ -40,7 +40,7 @@ public class DocumentController {
         this.users = users;
     }
 
-    public record SearchRequest(String organization) {}
+    public record SearchRequest(String organizationUuid) {}
 
     public record DocumentDto(Long id, String title, String content, String metadata) {}
 
@@ -50,8 +50,8 @@ public class DocumentController {
                                     @AuthenticationPrincipal UserDetails principal) {
         Filter.Expression expr = new Filter.Expression(
                 Filter.ExpressionType.EQ,
-                new Filter.Key("organization"),
-                new Filter.Value(req.organization()));
+                new Filter.Key("organizationUuid"),
+                new Filter.Value(req.organizationUuid()));
 
         // Vulnerable: convertExpression() wraps the user-controlled value in
         // single quotes without escaping.
@@ -64,7 +64,7 @@ public class DocumentController {
         // Deliberately vulnerable: the unescaped filter can inject an OR that
         // escapes this AND condition (SQL's AND has higher precedence).
         String sql = "SELECT id, title, content, metadata FROM document WHERE "
-                + "JSON_VALUE(metadata, '$.organization') = ? AND " + whereFragment;
+                + "JSON_VALUE(metadata, '$.organizationUuid') = ? AND " + whereFragment;
 
         return jdbc.query(sql, (rs, i) -> new DocumentDto(
                 rs.getLong("id"),
@@ -79,19 +79,19 @@ public class DocumentController {
     public List<DocumentDto> searchSafe(@RequestBody SearchRequest req,
                                         @AuthenticationPrincipal UserDetails principal) {
         String sql = "SELECT id, title, content, metadata FROM document WHERE "
-                + "JSON_VALUE(metadata, '$.organization') = ? AND "
-                + "JSON_VALUE(metadata, '$.organization') = ?";
+                + "JSON_VALUE(metadata, '$.organizationUuid') = ? AND "
+                + "JSON_VALUE(metadata, '$.organizationUuid') = ?";
         return jdbc.query(sql, (rs, i) -> new DocumentDto(
                 rs.getLong("id"),
                 rs.getString("title"),
                 rs.getString("content"),
-                rs.getString("metadata")), allowedOrganization(principal), req.organization());
+                rs.getString("metadata")), allowedOrganization(principal), req.organizationUuid());
     }
 
     private String allowedOrganization(UserDetails principal) {
         return users.findById(principal.getUsername())
                 .orElseThrow(() -> new IllegalStateException("Authenticated user is missing"))
-                .getOrganization();
+                .getOrganizationUuid();
     }
 
     @PostMapping("/search-debug")
@@ -99,8 +99,8 @@ public class DocumentController {
     public Map<String, Object> searchDebug(@RequestBody SearchRequest req) {
         Filter.Expression expr = new Filter.Expression(
                 Filter.ExpressionType.EQ,
-                new Filter.Key("organization"),
-                new Filter.Value(req.organization()));
+                new Filter.Key("organizationUuid"),
+                new Filter.Value(req.organizationUuid()));
         return Map.of("whereFragment", converter.convertExpression(expr));
     }
 }

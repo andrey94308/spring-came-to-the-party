@@ -33,18 +33,18 @@ def call(method, path, expected, username=None, password=None, **kwargs):
 
 api = call('GET', '/', 200)
 assert api['service'] == 'OrgArchive'
-assert {'/signup', '/users', '/notes'} <= {item['path'] for item in api['endpoints']}
+assert {'/signup', '/users', '/documents/search'} <= {item['path'] for item in api['endpoints']}
 call('GET', '/users', 401)
-call('GET', '/notes', 401)
 username = 'user-' + uuid.uuid4().hex[:10]
 password = 'UserPass!' + uuid.uuid4().hex[:12]
 account = call('POST', '/signup', 201, json={
     'username': username, 'displayName': 'Demo User',
     'email': username + '@example.test', 'password': password,
 })
-organization = account['organization']
-assert organization.startswith('trial-')
-assert call('GET', f'/organizations/{organization}/notes', 200, username, password) == []
+organization_uuid = account['organizationUuid']
+assert str(uuid.UUID(organization_uuid)) == organization_uuid
+assert call('POST', '/documents/search', 200, username, password,
+            json={'organizationUuid': organization_uuid}) == []
 users = call('GET', '/users', 200, username, password)
 assert users and any(user['username'] == 'anna' for user in users)
 assert any(user['role'] == 'admin' for user in users)
@@ -55,17 +55,17 @@ assert anna['passwordHash'].startswith(('$2a$', '$2b$', '$2y$'))
 anna_password = 'sunshine'
 assert bcrypt.checkpw(anna_password.encode(), anna['passwordHash'].encode())
 normal = call('POST', '/documents/search', 200, 'anna', anna_password,
-              json={'organization': 'atlas-consulting'})
-assert normal and {json.loads(doc['metadata'])['organization'] for doc in normal} == {'atlas-consulting'}
+              json={'organizationUuid': '786298a5-8c02-56ce-ba8f-d2b41ec3333c'})
+assert normal and {json.loads(doc['metadata'])['organizationUuid'] for doc in normal} == {'786298a5-8c02-56ce-ba8f-d2b41ec3333c'}
 assert call('POST', '/documents/search', 200, 'anna', anna_password,
-            json={'organization': 'harbor-delivery'}) == []
-payload = "atlas-consulting' OR '1'='1"
+            json={'organizationUuid': '1ae53893-c399-57c3-ba32-16e55b435249'}) == []
+payload = "786298a5-8c02-56ce-ba8f-d2b41ec3333c' OR '1'='1"
 injected = call('POST', '/documents/search', 200, 'anna', anna_password,
-                json={'organization': payload})
-organizations = {json.loads(doc['metadata'])['organization'] for doc in injected}
-assert {'atlas-consulting', 'harbor-delivery', 'cedar-partners', 'siteworks-group',
-        'meridian-legal'} <= organizations
+                json={'organizationUuid': payload})
+organizations = {json.loads(doc['metadata'])['organizationUuid'] for doc in injected}
+assert {'786298a5-8c02-56ce-ba8f-d2b41ec3333c', '1ae53893-c399-57c3-ba32-16e55b435249', 'aa2262cf-c84c-5f89-8853-dc9b2ebb4a7b', '768fc845-aff9-5b32-b626-a8f05a8778d2',
+        'd3302858-83b5-5ec5-aba6-1f7c9da45bd0'} <= organizations
 assert any('FLAG{archive-isolation-broken-by-converter}' in doc['content'] for doc in injected)
 assert call('POST', '/documents/search-safe', 200, 'anna', anna_password,
-            json={'organization': payload}) == []
+            json={'organizationUuid': payload}) == []
 print('OrgArchive chain OK: signup, method authorization bypass, debug hash, SQL injection')

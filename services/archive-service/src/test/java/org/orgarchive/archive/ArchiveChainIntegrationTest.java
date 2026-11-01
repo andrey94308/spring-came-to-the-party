@@ -41,24 +41,21 @@ class ArchiveChainIntegrationTest {
 
     @Test void signupAndMethodAuthorizationBoundary() throws Exception {
         mvc.perform(get("/users")).andExpect(status().isUnauthorized());
-        mvc.perform(get("/notes")).andExpect(status().isUnauthorized());
-        String username = "visitor-" + UUID.randomUUID().toString().substring(0, 8);
-        String password = "VisitorPass!234";
+        String username = "user-" + UUID.randomUUID().toString().substring(0, 8);
+        String password = "UserPass!234";
         String response = mvc.perform(post("/signup").contentType(MediaType.APPLICATION_JSON)
                         .content(json.writeValueAsString(Map.of("username", username,
                                 "displayName", "Demo Visitor", "email", username + "@example.test",
                                 "password", password))))
                 .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
-        String organization = json.readTree(response).get("organization").asText();
-        assertThat(organization).startsWith("trial-");
-        mvc.perform(get("/organizations/" + organization + "/notes")
-                        .header("Authorization", basic(username, password)))
-                .andExpect(status().isOk());
-        mvc.perform(get("/organizations/atlas-consulting/notes")
-                        .header("Authorization", basic(username, password)))
-                .andExpect(status().isForbidden());
-        mvc.perform(get("/notes").header("Authorization", basic(username, password)))
-                .andExpect(status().isOk());
+        String organizationUuid = json.readTree(response).get("organizationUuid").asText();
+        assertThat(UUID.fromString(organizationUuid).toString()).isEqualTo(organizationUuid);
+        String ownDocuments = mvc.perform(post("/documents/search")
+                        .header("Authorization", basic(username, password))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json.writeValueAsString(Map.of("organizationUuid", organizationUuid))))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        assertThat(ownDocuments).isEqualTo("[]");
         int expected = Boolean.getBoolean("demo.fixed-security") ? 403 : 200;
         String roster = mvc.perform(get("/users?debug=true")
                         .header("Authorization", basic(username, password)))
@@ -82,9 +79,10 @@ class ArchiveChainIntegrationTest {
         String rejectedPrivilegeFields = mvc.perform(post("/signup").contentType(MediaType.APPLICATION_JSON)
                         .content(json.writeValueAsString(Map.of("username", "evil-admin",
                                 "displayName", "Bad Input", "email", "bad@example.test",
-                                "password", password, "role", "admin", "organization", "atlas-consulting"))))
+                                "password", password, "role", "admin", "organizationUuid", "786298a5-8c02-56ce-ba8f-d2b41ec3333c"))))
                 .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
-        assertThat(json.readTree(rejectedPrivilegeFields).get("organization").asText()).startsWith("trial-");
+        assertThat(json.readTree(rejectedPrivilegeFields).get("organizationUuid").asText())
+                .isNotEqualTo("786298a5-8c02-56ce-ba8f-d2b41ec3333c");
         mvc.perform(get("/users").header("Authorization", basic("evil-admin", password)))
                 .andExpect(status().is(expected));
     }
@@ -98,28 +96,20 @@ class ArchiveChainIntegrationTest {
         assertThat(debug).contains("passwordHash", "anna");
         mvc.perform(get("/users/anna").header("Authorization", basic("admin", "Adm!nQ8vL2n$R7p")))
                 .andExpect(status().isOk());
-        mvc.perform(get("/notes").header("Authorization", basic("admin", "Adm!nQ8vL2n$R7p")))
-                .andExpect(status().isForbidden());
-        String annaNotes = notes("anna", "sunshine");
-        assertThat(json.readTree(annaNotes)).isEqualTo(json.readTree(notes("m.lehtinen", "d5jW#9pqL!2zX")));
-        assertThat(annaNotes).contains("Report index");
-        assertThat(notes("r.dubois", "Tr0ub4dor&3xZ!")).contains("Fuel review").doesNotContain("Report index");
-        assertThat(search("/documents/search", "harbor-delivery")).isEqualTo("[]");
-        assertThat(search("/documents/search", "atlas-consulting"))
-                .contains("atlas-consulting").doesNotContain("meridian-legal");
-        assertThat(search("/documents/search", "atlas-consulting' OR '1'='1"))
-                .contains("atlas-consulting", "harbor-delivery", "cedar-partners",
-                        "siteworks-group", "meridian-legal", "FLAG{integration-final}");
-        assertThat(search("/documents/search-safe", "atlas-consulting' OR '1'='1")).isEqualTo("[]");
+        String annaUuid = "786298a5-8c02-56ce-ba8f-d2b41ec3333c";
+        String foreignUuid = "1ae53893-c399-57c3-ba32-16e55b435249";
+        assertThat(search("/documents/search", foreignUuid)).isEqualTo("[]");
+        assertThat(search("/documents/search", annaUuid))
+                .contains(annaUuid).doesNotContain("d3302858-83b5-5ec5-aba6-1f7c9da45bd0");
+        assertThat(search("/documents/search", annaUuid + "' OR '1'='1"))
+                .contains(annaUuid, foreignUuid, "aa2262cf-c84c-5f89-8853-dc9b2ebb4a7b",
+                        "768fc845-aff9-5b32-b626-a8f05a8778d2", "d3302858-83b5-5ec5-aba6-1f7c9da45bd0",
+                        "FLAG{integration-final}");
+        assertThat(search("/documents/search-safe", annaUuid + "' OR '1'='1")).isEqualTo("[]");
     }
 
-    private String notes(String username, String password) throws Exception {
-        return mvc.perform(get("/notes").header("Authorization", basic(username, password)))
-                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
-    }
-
-    private String search(String path, String organization) throws Exception {
-        String body = json.writeValueAsString(Map.of("organization", organization));
+    private String search(String path, String organizationUuid) throws Exception {
+        String body = json.writeValueAsString(Map.of("organizationUuid", organizationUuid));
         return mvc.perform(post(path).header("Authorization", basic("anna", "sunshine"))
                         .contentType(MediaType.APPLICATION_JSON).content(body))
                 .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();

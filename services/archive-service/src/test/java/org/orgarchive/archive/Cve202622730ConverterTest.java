@@ -21,24 +21,24 @@ class Cve202622730ConverterTest {
     void converterEmitsRawSingleQuoteFromUserInput() {
         var expr = new Filter.Expression(
                 Filter.ExpressionType.EQ,
-                new Filter.Key("organization"),
-                new Filter.Value("atlas-consulting' OR '1'='1"));
+                new Filter.Key("organizationUuid"),
+                new Filter.Value("786298a5-8c02-56ce-ba8f-d2b41ec3333c' OR '1'='1"));
 
         String out = converter.convertExpression(expr);
 
         // The raw user-supplied single quote escapes the surrounding string literal.
-        assertThat(out).contains("atlas-consulting' OR '1'='1");
+        assertThat(out).contains("786298a5-8c02-56ce-ba8f-d2b41ec3333c' OR '1'='1");
         // A patched converter would double the embedded single quote.
-        assertThat(out).doesNotContain("analyst'' OR ''1''=''1");
+        assertThat(out).doesNotContain("786298a5-8c02-56ce-ba8f-d2b41ec3333c'' OR ''1''=''1");
     }
 
     @Test
     void converterAcceptsLegitimateValueUnchanged() {
         var expr = new Filter.Expression(
                 Filter.ExpressionType.EQ,
-                new Filter.Key("organization"),
-                new Filter.Value("atlas-consulting"));
+                new Filter.Key("organizationUuid"),
+                new Filter.Value("786298a5-8c02-56ce-ba8f-d2b41ec3333c"));
         String out = converter.convertExpression(expr);
-        assertThat(out).contains("'atlas-consulting'");
+        assertThat(out).contains("'786298a5-8c02-56ce-ba8f-d2b41ec3333c'");
     }
 }

@@ -17,8 +17,6 @@ public class ApiIndexController {
                 new Endpoint("GET", "/users", "authenticated; admin role"),
                 new Endpoint("GET", "/users/{username}", "authenticated; admin role"),
                 new Endpoint("GET", "/organizations", "authenticated; admin role"),
-                new Endpoint("GET", "/notes", "authenticated user"),
-                new Endpoint("GET", "/organizations/{organization}/notes", "organization member"),
                 new Endpoint("POST", "/documents/search", "authenticated user"),
                 new Endpoint("POST", "/documents/search-safe", "authenticated user"),
                 new Endpoint("POST", "/documents/search-debug", "authenticated user")));

@@ -23,7 +23,7 @@ public class OrganizationController implements AdminQuery<String, OrganizationCo
     public List<OrganizationDto> list(String filter, boolean debug) {
         String needle = filter == null ? "" : filter.toLowerCase(Locale.ROOT);
         Map<String, Long> counts = users.findAll().stream()
-                .collect(Collectors.groupingBy(User::getOrganization, Collectors.counting()));
+                .collect(Collectors.groupingBy(User::getOrganizationUuid, Collectors.counting()));
         return counts.entrySet().stream()
                 .filter(entry -> entry.getKey().toLowerCase(Locale.ROOT).contains(needle))
                 .sorted(Map.Entry.comparingByKey())

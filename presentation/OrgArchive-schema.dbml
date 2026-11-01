@@ -1,6 +1,6 @@
 Project OrgArchive {
   database_type: 'MariaDB'
-  Note: 'Organization is a logical tenant key. The schema has no organization table or foreign keys between these three tables.'
+  Note: 'organization_uuid is a logical tenant identifier. There is no organization table or foreign key to document metadata.'
 }
 
 Table app_user {
@@ -9,19 +9,12 @@ Table app_user {
   email varchar(128) [not null]
   password_hash varchar(80) [not null]
   role varchar(32) [not null]
-  organization varchar(64) [not null]
-}
-
-Table note {
-  id bigint [pk, increment]
-  organization varchar(64) [not null]
-  title varchar(255) [not null]
-  body text [not null]
+  organization_uuid varchar(36) [not null]
 }
 
 Table document {
   id bigint [pk, increment]
   title varchar(255) [not null]
   content text [not null]
-  metadata text [not null, note: 'JSON with organization, category and revision']
+  metadata text [not null, note: 'JSON with organizationUuid, category and revision']
 }

@@ -25,19 +25,19 @@ public class User {
     @Column(nullable = false, length = 32)
     private String role;
 
-    @Column(nullable = false, length = 64)
-    private String organization;
+    @Column(name = "organization_uuid", nullable = false, length = 36)
+    private String organizationUuid;
 
     public User() {}
 
     public User(String username, String displayName, String email,
-                String passwordHash, String role, String organization) {
+                String passwordHash, String role, String organizationUuid) {
         this.username = username;
         this.displayName = displayName;
         this.email = email;
         this.passwordHash = passwordHash;
         this.role = role;
-        this.organization = organization;
+        this.organizationUuid = organizationUuid;
     }
 
     public String getUsername()      { return username; }
@@ -45,12 +45,12 @@ public class User {
     public String getEmail()         { return email; }
     public String getPasswordHash()  { return passwordHash; }
     public String getRole()          { return role; }
-    public String getOrganization()    { return organization; }
+    public String getOrganizationUuid() { return organizationUuid; }
 
     public void setUsername(String username) { this.username = username; }
     public void setDisplayName(String displayName) { this.displayName = displayName; }
     public void setEmail(String email) { this.email = email; }
     public void setPasswordHash(String passwordHash) { this.passwordHash = passwordHash; }
     public void setRole(String role) { this.role = role; }
-    public void setOrganization(String organization) { this.organization = organization; }
+    public void setOrganizationUuid(String organizationUuid) { this.organizationUuid = organizationUuid; }
 }

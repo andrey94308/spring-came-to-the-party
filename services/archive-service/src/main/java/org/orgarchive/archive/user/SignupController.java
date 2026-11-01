@@ -23,7 +23,7 @@ public class SignupController {
     }
 
     public record SignupRequest(String username, String displayName, String email, String password) {}
-    public record SignupResponse(String username, String organization) {}
+    public record SignupResponse(String username, String organizationUuid) {}
 
     @PostMapping("/signup")
     @ResponseStatus(HttpStatus.CREATED)
@@ -43,13 +43,13 @@ public class SignupController {
         if (users.existsById(username)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Username already exists");
         }
-        String organization = "trial-" + UUID.randomUUID();
+        String organizationUuid = UUID.randomUUID().toString();
         try {
             users.saveAndFlush(new User(username, request.displayName().trim(), request.email().trim(),
-                    passwords.encode(request.password()), "user", organization));
+                    passwords.encode(request.password()), "user", organizationUuid));
         } catch (DataIntegrityViolationException e) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Username already exists", e);
         }
-        return new SignupResponse(username, organization);
+        return new SignupResponse(username, organizationUuid);
     }
 }
