@@ -1,14 +1,14 @@
 # OrgArchive presentation outline
 
-1. OrgArchive: shared records for organizations.
-2. A known gateway URL and its public API index.
-3. Anonymous `/users` and `/notes` return `401`.
-4. Sign up: a normal account in a new trial organization.
-5. Notes isolation: own organization succeeds, another returns `403`.
-6. Spring Security CVE-2025-22223: inherited admin rule missed on a generic controller interface.
-7. Admin debug roster exposes BCrypt hashes; direct user lookup still denies the visitor. Recover Bob's lab password offline.
-8. Bob and Maija share notes; another organization sees different notes.
-9. Normal document search stays in Bob's organization.
-10. Spring AI CVE-2026-22730: injected metadata filter crosses organization boundaries.
-11. Parameterized safe query returns no foreign documents.
-12. Lessons: enforce roles at a reliable boundary, avoid hash exposure, and bind user input in SQL.
+1. **OrgArchive.** Shared notes and documents for separate organizations. The live attack is shown later in Postman.
+2. **Service architecture.** Public edge gateway, internal archive service, MariaDB, HTTP Basic, and Spring AI's metadata converter.
+3. **API surface and access.** Public index and signup; authenticated user routes; intended admin listings. The public index is a presentation aid, not an authorization mechanism.
+4. **CVE-2025-22223.** Spring Security 6.4.3 misses an inherited `@PreAuthorize` on the generic `AdminQuery<F,R>` interface. HTTP authentication still applies, so a signed-in regular user reaches the admin listing. Fixed in 6.4.4.
+5. **Application mistakes after the bypass.** The optional admin debug response includes BCrypt password hashes. Bob's deliberately weak lab password can be recovered offline. The attacker keeps `ROLE_USER`; direct `/users/bob` remains forbidden.
+6. **Organization boundaries.** Notes and document scope come from the authenticated user's database record. Ordinary cross-organization requests fail or return no documents.
+7. **Search query construction.** The application binds the user's organization but appends the Spring AI converter's metadata expression to the SQL statement.
+8. **CVE-2026-22730.** Spring AI MariaDB Store 1.0.3 emits an unescaped filter value. An injected `OR` escapes the `AND` scope and returns documents from other organizations. Fixed in 1.0.4.
+9. **Safe comparison and fixes.** Bind both values, upgrade the affected libraries, keep role checks on concrete methods, and omit password hashes from responses. `/search-safe` is a local comparison, not a patched Spring AI build.
+10. **Postman demonstration.** Sixteen ordered requests: discovery and signup; role bypass, hash recovery and notes; ordinary, injected and safe document searches.
+
+Without an API index, an attacker may discover likely routes through documentation, client code, observed traffic, crawling, and targeted guesses. None of these guarantees a complete endpoint list. Access checks must work even when a route is known.
