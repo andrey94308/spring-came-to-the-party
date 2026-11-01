@@ -1,101 +1,71 @@
 services:
   mariadb:
     image: mariadb:11.4
-    container_name: mato-mariadb
     environment:
       MARIADB_ROOT_PASSWORD: rootpw
       MARIADB_DATABASE: sctp
       MARIADB_USER: sctp
       MARIADB_PASSWORD: sctp
     volumes:
+      - mariadb-data:/var/lib/mysql
       - ./infra/mariadb/init:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
       interval: 5s
       timeout: 5s
       retries: 20
-    networks:
-      - mato-net
+    networks: [mato-net]
+
+  ldap:
+    image: osixia/openldap:1.5.0
+    environment:
+      LDAP_ORGANISATION: MATO
+      LDAP_DOMAIN: mato.int
+      LDAP_ADMIN_PASSWORD: local-bootstrap-only
+      LDAP_TLS: "false"
+    command: ["--copy-service"]
+    volumes:
+      - ldap-data:/var/lib/ldap
+      - ldap-config:/etc/ldap/slapd.d
+      - ./infra/ldap/bootstrap:/container/service/slapd/assets/config/bootstrap/ldif/custom:ro
+    healthcheck:
+      test: ["CMD-SHELL", "ldapwhoami -x -H ldap://localhost:389 >/dev/null 2>&1"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks: [mato-net]
 
   archive-service:
-    build:
-      context: ./services/archive-service
-    container_name: mato-archive
+    build: ./services/archive-service
     environment:
       SPRING_DATASOURCE_URL: jdbc:mariadb://mariadb:3306/sctp
       SPRING_DATASOURCE_USERNAME: sctp
       SPRING_DATASOURCE_PASSWORD: sctp
-      FLAG_1: "FLAG{spring-came-to-the-party-via-spel-1}"
-      FLAG_2: "FLAG{sunshine-makes-2fa-optional-2}"
-      FLAG_3: "FLAG{single-quotes-are-not-fences-3}"
+      LDAP_URL: ldap://ldap:389
+      LDAP_BASE: dc=mato,dc=int
       WEAK_USER_PASSWORD: sunshine
-      # The seeded special-ops document advertises this URL to the player —
-      # they run the solve scripts from the host, so the URL must be host-visible.
-      COMMAND_URL: http://localhost:8082
-      COMMAND_PRESIDENT_PASSWORD: "Th3.Pr3sident's_Password!2026"
+      FINAL_FLAG: FLAG{archive-isolation-broken-by-converter}
     depends_on:
       mariadb:
         condition: service_healthy
-    healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:8081/actuator/health | grep -q UP || exit 1"]
-      interval: 5s
-      timeout: 5s
-      retries: 30
-    networks:
-      - mato-net
+      ldap:
+        condition: service_healthy
+    networks: [mato-net]
 
   edge-gateway:
-    build:
-      context: ./services/edge-gateway
-    container_name: mato-edge
-    ports:
-      - "8080:8080"
+    build: ./services/edge-gateway
+    ports: ["8080:8080"]
     environment:
       ARCHIVE_URI: http://archive-service:8081
-      # Audit-trace flag defaults to false. CVE-2025-41243 flips this at runtime
-      # via SpEL injection into the gateway actuator.
-      MATO_GATEWAY_AUDIT_DEBUG_TRACE: "false"
     depends_on:
       archive-service:
-        condition: service_healthy
-    networks:
-      - mato-net
-
-  command-control:
-    build:
-      context: ./services/command-control
-    container_name: mato-command
-    ports:
-      - "8082:8082"
-    environment:
-      JWT_SECRET: "ctf-shared-jwt-secret-do-not-use-in-prod-please"
-      OTP_SEED: "presidential-otp-seed-2026"
-      OTP_WINDOW_SECONDS: "30"
-      JWT_TTL_SECONDS: "30"
-      FLAG_4: "FLAG{seventy-three-bytes-then-otp-roulette-4}"
-      PRESIDENT_PASSWORD: "Th3.Pr3sident's_Password!2026"
-    networks:
-      - mato-net
-
-  demo-runner:
-    profiles: ["demo"]
-    build:
-      context: .
-      dockerfile: solve/Dockerfile.demo
-    environment:
-      GATEWAY_URL: http://edge-gateway:8080
-      COMMAND_URL: http://command-control:8082
-    depends_on:
-      edge-gateway:
         condition: service_started
-      command-control:
-        condition: service_started
-    stdin_open: true
-    tty: true
-    volumes:
-      - ./demo-state:/state
-    networks:
-      - mato-net
+    networks: [mato-net]
+
+volumes:
+  mariadb-data:
+  ldap-data:
+  ldap-config:
 
 networks:
   mato-net:

@@ -1,0 +1,148 @@
+dn: ou=people,dc=mato,dc=int
+objectClass: organizationalUnit
+ou: people
+
+dn: uid=m.lehtinen,ou=people,dc=mato,dc=int
+objectClass: inetOrgPerson
+uid: m.lehtinen
+cn: Maija Lehtinen
+sn: Lehtinen
+mail: m.lehtinen@mato.int
+userPassword: d5jW#9pqL!2zX
+
+dn: uid=bob,ou=people,dc=mato,dc=int
+objectClass: inetOrgPerson
+uid: bob
+cn: Bob Brennan
+sn: Brennan
+mail: bob@mato.int
+userPassword: sunshine
+
+dn: uid=a.keller,ou=people,dc=mato,dc=int
+objectClass: inetOrgPerson
+uid: a.keller
+cn: Anika Keller
+sn: Keller
+mail: a.keller@mato.int
+userPassword: V8!aP4#rQ2sLm
+
+dn: uid=s.cho,ou=people,dc=mato,dc=int
+objectClass: inetOrgPerson
+uid: s.cho
+cn: Sora Cho
+sn: Cho
+mail: s.cho@mato.int
+userPassword: Q6^tN9@xC3wBv
+
+dn: uid=j.ortega,ou=people,dc=mato,dc=int
+objectClass: inetOrgPerson
+uid: j.ortega
+cn: Jules Ortega
+sn: Ortega
+mail: j.ortega@mato.int
+userPassword: M2%fK7!zT5nYp
+
+dn: uid=r.dubois,ou=people,dc=mato,dc=int
+objectClass: inetOrgPerson
+uid: r.dubois
+cn: Renaud Dubois
+sn: Dubois
+mail: r.dubois@mato.int
+userPassword: Tr0ub4dor&3xZ!
+
+dn: uid=l.meyer,ou=people,dc=mato,dc=int
+objectClass: inetOrgPerson
+uid: l.meyer
+cn: Lena Meyer
+sn: Meyer
+mail: l.meyer@mato.int
+userPassword: F7!qD2#vH9mRx
+
+dn: uid=p.ahmed,ou=people,dc=mato,dc=int
+objectClass: inetOrgPerson
+uid: p.ahmed
+cn: Parvez Ahmed
+sn: Ahmed
+mail: p.ahmed@mato.int
+userPassword: N4@kS8^aL1tWz
+
+dn: uid=e.rossi,ou=people,dc=mato,dc=int
+objectClass: inetOrgPerson
+uid: e.rossi
+cn: Elena Rossi
+sn: Rossi
+mail: e.rossi@mato.int
+userPassword: C9%xG3!pJ6bUa
+
+dn: uid=mr.president,ou=people,dc=mato,dc=int
+objectClass: inetOrgPerson
+uid: mr.president
+cn: Mr. President
+sn: President
+mail: mr.president@mato.int
+userPassword: Pr3s!d3nt$Q8vL2n
+
+dn: uid=c.wright,ou=people,dc=mato,dc=int
+objectClass: inetOrgPerson
+uid: c.wright
+cn: Clara Wright
+sn: Wright
+mail: c.wright@mato.int
+userPassword: R5@hV2#sK8dPm
+
+dn: uid=t.sato,ou=people,dc=mato,dc=int
+objectClass: inetOrgPerson
+uid: t.sato
+cn: Taro Sato
+sn: Sato
+mail: t.sato@mato.int
+userPassword: B4!nY7^fD1qZx
+
+dn: uid=i.novak,ou=people,dc=mato,dc=int
+objectClass: inetOrgPerson
+uid: i.novak
+cn: Irena Novak
+sn: Novak
+mail: i.novak@mato.int
+userPassword: J8%wC3@rM6aTs
+
+dn: uid=o.martin,ou=people,dc=mato,dc=int
+objectClass: inetOrgPerson
+uid: o.martin
+cn: Owen Martin
+sn: Martin
+mail: o.martin@mato.int
+userPassword: P2#zL9!cV4hQy
+
+dn: uid=n.okafor,ou=people,dc=mato,dc=int
+objectClass: inetOrgPerson
+uid: n.okafor
+cn: Nia Okafor
+sn: Okafor
+mail: n.okafor@mato.int
+userPassword: X7@tF3^mB9kRz
+
+dn: uid=d.berg,ou=people,dc=mato,dc=int
+objectClass: inetOrgPerson
+uid: d.berg
+cn: Daniel Berg
+sn: Berg
+mail: d.berg@mato.int
+userPassword: A6!vW2#qH8nLp
+
+dn: uid=k.silva,ou=people,dc=mato,dc=int
+objectClass: inetOrgPerson
+uid: k.silva
+cn: Kira Silva
+sn: Silva
+mail: k.silva@mato.int
+userPassword: E4%yJ9@pT1dSc
+
+dn: uid=v.hale,ou=people,dc=mato,dc=int
+objectClass: inetOrgPerson
+uid: v.hale
+cn: Victor Hale
+sn: Hale
+mail: v.hale@mato.int
+userPassword: U3#bN7!xG5rMw
+

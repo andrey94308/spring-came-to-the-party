@@ -2,6 +2,7 @@ package org.mato.archive.document;
 
 import java.util.List;
 import java.util.Map;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.mato.archive.user.UserRepository;
 import org.springframework.ai.vectorstore.filter.Filter;
 import org.springframework.ai.vectorstore.mariadb.MariaDBFilterExpressionConverter;
@@ -44,6 +45,7 @@ public class DocumentController {
     public record DocumentDto(Long id, String title, String content, String metadata) {}
 
     @PostMapping("/search")
+    @PreAuthorize("hasRole('USER')")
     public List<DocumentDto> search(@RequestBody SearchRequest req,
                                     @AuthenticationPrincipal UserDetails principal) {
         Filter.Expression expr = new Filter.Expression(
@@ -73,6 +75,7 @@ public class DocumentController {
 
     /** A safe comparison for the live demo: both values are JDBC parameters. */
     @PostMapping("/search-safe")
+    @PreAuthorize("hasRole('USER')")
     public List<DocumentDto> searchSafe(@RequestBody SearchRequest req,
                                         @AuthenticationPrincipal UserDetails principal) {
         String sql = "SELECT id, title, content, metadata FROM document WHERE "
@@ -92,6 +95,7 @@ public class DocumentController {
     }
 
     @PostMapping("/search-debug")
+    @PreAuthorize("hasRole('USER')")
     public Map<String, Object> searchDebug(@RequestBody SearchRequest req) {
         Filter.Expression expr = new Filter.Expression(
                 Filter.ExpressionType.EQ,

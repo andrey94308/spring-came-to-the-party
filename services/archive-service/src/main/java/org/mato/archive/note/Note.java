@@ -16,7 +16,7 @@ public class Note {
     private Long id;
 
     @Column(nullable = false, length = 64)
-    private String username;
+    private String department;
 
     @Column(nullable = false, length = 255)
     private String title;
@@ -26,19 +26,19 @@ public class Note {
 
     public Note() {}
 
-    public Note(String username, String title, String body) {
-        this.username = username;
+    public Note(String department, String title, String body) {
+        this.department = department;
         this.title = title;
         this.body = body;
     }
 
     public Long getId()         { return id; }
-    public String getUsername() { return username; }
+    public String getDepartment() { return department; }
     public String getTitle()    { return title; }
     public String getBody()     { return body; }
 
     public void setId(Long id)               { this.id = id; }
-    public void setUsername(String username) { this.username = username; }
+    public void setDepartment(String department) { this.department = department; }
     public void setTitle(String title)       { this.title = title; }
     public void setBody(String body)         { this.body = body; }
 }

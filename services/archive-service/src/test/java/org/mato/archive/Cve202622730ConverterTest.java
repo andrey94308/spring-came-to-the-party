@@ -10,7 +10,7 @@ import org.springframework.ai.vectorstore.mariadb.MariaDBFilterExpressionConvert
  * Pins the vulnerable behaviour of CVE-2026-22730 in the
  * {@code spring-ai-mariadb-store} dependency we ship. If the converter ever
  * escapes single quotes, this test will fail and we know our SQL-injection
- * surface for Flag 3 is gone.
+ * surface is gone.
  */
 class Cve202622730ConverterTest {
 
@@ -22,12 +22,12 @@ class Cve202622730ConverterTest {
         var expr = new Filter.Expression(
                 Filter.ExpressionType.EQ,
                 new Filter.Key("department"),
-                new Filter.Value("analyst' OR '1'='1"));
+                new Filter.Value("intel-analysis' OR '1'='1"));
 
         String out = converter.convertExpression(expr);
 
         // The raw user-supplied single quote escapes the surrounding string literal.
-        assertThat(out).contains("analyst' OR '1'='1");
+        assertThat(out).contains("intel-analysis' OR '1'='1");
         // A patched converter would double the embedded single quote.
         assertThat(out).doesNotContain("analyst'' OR ''1''=''1");
     }
@@ -37,8 +37,8 @@ class Cve202622730ConverterTest {
         var expr = new Filter.Expression(
                 Filter.ExpressionType.EQ,
                 new Filter.Key("department"),
-                new Filter.Value("analyst"));
+                new Filter.Value("intel-analysis"));
         String out = converter.convertExpression(expr);
-        assertThat(out).contains("'analyst'");
+        assertThat(out).contains("'intel-analysis'");
     }
 }

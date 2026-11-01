@@ -21,12 +21,7 @@ public class Document {
     @Column(nullable = false, columnDefinition = "TEXT")
     private String content;
 
-    /**
-     * JSON metadata blob, e.g. {"department":"analyst"}.
-     * The {@code department} is also kept as a top-level column for ergonomic
-     * querying in tests, but the SQL-injection surface is in the JSON path
-     * accessed by Spring AI's MariaDBFilterExpressionConverter.
-     */
+    /** JSON metadata with the department key used by Spring AI. */
     @Column(nullable = false, columnDefinition = "TEXT")
     private String metadata;
 

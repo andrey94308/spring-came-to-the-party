@@ -1,87 +1,29 @@
 # Spring Came to the Party
 
-A deliberately vulnerable Spring demo for security knowledge sharing.
+A local, deliberately vulnerable MATO archive lab. The Postman chain starts without credentials and ends with a document from an unassigned department.
 
-## Scenario
-
-The President's AI assistant has accidentally leaked some classified material into a public repository. Your job is to follow the trail, escalate through MATO's network, and recover the nuclear launch codes before someone less friendly does.
-
-There are **four flags**. Find them all.
-
-## Getting Started
+## Run
 
 ```bash
-make build
-make test-local
+docker compose up --build
 ```
 
-You will need:
-
-- Docker (with `docker compose` v2)
-- `make`
-
-Python is included in the `demo-runner` container and is not required on the host.
-
-## Make Targets
-
-| Target            | What it does                                                    |
-| ----------------- | --------------------------------------------------------------- |
-| `make clean`      | Stop containers, remove volumes, clean Maven build output       |
-| `make build`      | Build all Docker images                                         |
-| `make test-java`  | Run per-module Java unit/integration tests                      |
-| `make test-local` | Bring up the stack and run the end-to-end solve script          |
-| `make demo`       | Run the interactive presentation flow against the running stack |
-
-On Windows, the same demo can be run without `make`:
+The gateway is at <http://localhost:8080>. Import `postman/MATO-document-search.postman_collection.json` and run requests in order. After request 3, copy Bob's `passwordHash` and run:
 
 ```bash
-docker compose up -d --build --wait
-docker compose --profile demo build demo-runner
-docker compose --profile demo run --rm demo-runner
+python3 -m pip install -r solve/requirements.txt
+python3 solve/crack_bob.py '$2a$10$...'
 ```
 
-For a non-interactive check of all four stages, replace the last command with:
+Set the recovered value as the collection's local `bobPassword` variable, then continue. The `query` field is retained for request compatibility but unused; this lab demonstrates the `department` filter.
 
-```bash
-docker compose --profile demo run --rm demo-runner python solve/solve_all.py
-```
+`make demo-reset` removes **both** MariaDB and LDAP volumes and rebuilds the seed. Use this after switching from an older version of the lab. `make test-java` runs the Java tests; `make test-local` checks the HTTP chain.
 
-## Stack
+## Chain
 
-- Java 21 + Spring Boot 3.4.5 (Maven)
-- Spring Cloud Gateway 4.2.0 (CVE-2025-41243)
-- Spring Security 6.4.4 (CVE-2025-22234)
-- Spring AI MariaDB Store 1.0.3 (CVE-2026-22730)
-- MariaDB 11.4
-- Docker Compose
+1. Spring LDAP 3.3.7 accepts the empty-password LDAP bind when OpenLDAP is deliberately configured with `olcAllows: bind_anon_dn` ([CVE-2026-41720](https://spring.io/security/cve-2026-41720/)). The archive uses Boot 3.4.5 to preserve the existing Spring AI integration; LDAP 4.0.3 would require a Boot 4 migration.
+2. The intentionally unsafe admin-only `/users` DTO discloses BCrypt hashes. Bob's password is the only supplied wordlist match.
+3. Bob and Maija see shared `intel-analysis` notes. Authorization uses the database role and department.
+4. Spring AI MariaDB Store 1.0.3 emits an unescaped filter value ([CVE-2026-22730](https://spring.io/security/cve-2026-22730/)). The application concatenates it into SQL after a bound authorized-department predicate. `/documents/search-safe` binds both values and preserves isolation; it is an application-level comparison, not the Spring AI patch.
 
-## Repository Layout
-
-```
-.
-├── services/
-│   ├── edge-gateway/        # Public-facing Spring Cloud Gateway (port 8080)
-│   ├── archive-service/     # /users, /notes, /documents/search (port 8081, internal)
-│   └── command-control/     # /login, /verify-otp, /warheads (port 8082)
-├── infra/
-│   └── mariadb/             # MariaDB init SQL
-├── solve/                   # Python solve scripts (one per flag, plus solve_all.py)
-└── docs/                    # Architecture, exploit-flow diagrams, working notes
-```
-
-## Browse the APIs
-
-Once the stack is running (`make up`):
-
-| Service         | OpenAPI                             | Swagger UI                              |
-| --------------- | ----------------------------------- | --------------------------------------- |
-| edge-gateway    | <http://localhost:8080/v3/api-docs> | <http://localhost:8080/swagger-ui.html> |
-| command-control | <http://localhost:8082/v3/api-docs> | <http://localhost:8082/swagger-ui.html> |
-
-The archive-service is internal-only on the docker network; players reach it through the edge-gateway.
-
-## Documentation
-
-- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — service map, inter-service contracts, trust model.
-- [`docs/EXPLOIT-FLOWS.md`](docs/EXPLOIT-FLOWS.md) — sequence diagram per flag.
-- [`docs/notes.md`](docs/notes.md) — working journal with implementation notes and test results.
+The archive, LDAP, and MariaDB are internal Compose services. Only the gateway publishes an application port. All data is disposable lab data.
