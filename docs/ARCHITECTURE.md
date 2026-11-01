@@ -1,14 +1,15 @@
-# Architecture
+# OrgArchive architecture
 
 ```text
-Postman → edge-gateway :8080 → archive-service :8081
-                                  ↙               ↘
-                              OpenLDAP          MariaDB
-                              identities        users, shared notes, documents
+Postman -> edge-gateway :8080 -> archive-service :8081 -> MariaDB
+                                     |                   |
+                                     |                   +-- users, notes, documents
+                                     +-- Spring Security HTTP Basic
+                                     +-- Spring AI metadata filter converter
 ```
 
-Only port 8080 is published. The gateway forwards the three archive path families. Archive authentication calls Spring LDAP 3.3.7's `LdapContextSource.getContext` with the supplied Basic password. OpenLDAP deliberately permits a DN plus empty password with `olcAllows: bind_anon_dn`. A successful bind is mapped to a MariaDB profile and role; users absent from MariaDB are rejected.
+The gateway exposes a public API index at `GET /` and routes the other API paths to the archive. The archive authenticates HTTP Basic credentials against BCrypt hashes in MariaDB. Public signup creates a `ROLE_USER` account in a new server-assigned organization. Only the gateway publishes a host port.
 
-`ROLE_ADMIN` lists the deliberately unsafe `/users` roster with BCrypt hashes. `ROLE_USER` reads notes and searches documents. Department scope comes from the authenticated user's database record. `mato-special-ops` has no user.
+`/users` requires an authenticated request. Its admin role rule is inherited from a generic `AdminQuery` interface, which is the affected method-security shape in Spring Security 6.4.3. The direct `/users/{username}` method has its own admin annotation and remains protected. `/notes` and `/documents` require regular user roles and derive the authorized organization from the stored account; a request field cannot change membership.
 
-The vulnerable search combines a bound authorized department with Spring AI MariaDB Store 1.0.3's converter output. A quote in the requested department changes SQL precedence. The safe comparison binds both values.
+The normal admin roster omits password hashes. A deliberately flawed `debug=true` response includes them. The document search combines a bound organization condition with Spring AI's vulnerable metadata expression; the safe comparison binds both values.

@@ -12,11 +12,11 @@
         <relativePath/>
     </parent>
 
-    <groupId>org.mato</groupId>
+    <groupId>org.orgarchive</groupId>
     <artifactId>edge-gateway</artifactId>
     <version>0.1.0</version>
     <name>edge-gateway</name>
-    <description>MATO archive edge gateway.</description>
+    <description>OrgArchive records edge gateway.</description>
 
     <properties>
         <java.version>21</java.version>

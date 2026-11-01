@@ -6,9 +6,9 @@ spring:
     name: archive-service
 
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:mariadb://localhost:3306/sctp}
-    username: ${SPRING_DATASOURCE_USERNAME:sctp}
-    password: ${SPRING_DATASOURCE_PASSWORD:sctp}
+    url: ${SPRING_DATASOURCE_URL:jdbc:mariadb://localhost:3306/orgarchive}
+    username: ${SPRING_DATASOURCE_USERNAME:orgarchive}
+    password: ${SPRING_DATASOURCE_PASSWORD:orgarchive}
     driver-class-name: org.mariadb.jdbc.Driver
 
   jpa:
@@ -18,10 +18,6 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.MariaDBDialect
         show_sql: false
-
-ldap:
-  url: ${LDAP_URL:ldap://localhost:389}
-  base: ${LDAP_BASE:dc=mato,dc=int}
 
 seed:
   weak-password: ${WEAK_USER_PASSWORD:sunshine}

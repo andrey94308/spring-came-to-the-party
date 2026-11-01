@@ -3,9 +3,9 @@ services:
     image: mariadb:11.4
     environment:
       MARIADB_ROOT_PASSWORD: rootpw
-      MARIADB_DATABASE: sctp
-      MARIADB_USER: sctp
-      MARIADB_PASSWORD: sctp
+      MARIADB_DATABASE: orgarchive
+      MARIADB_USER: orgarchive
+      MARIADB_PASSWORD: orgarchive
     volumes:
       - mariadb-data:/var/lib/mysql
       - ./infra/mariadb/init:/docker-entrypoint-initdb.d:ro
@@ -14,43 +14,25 @@ services:
       interval: 5s
       timeout: 5s
       retries: 20
-    networks: [mato-net]
-
-  ldap:
-    image: osixia/openldap:1.5.0
-    environment:
-      LDAP_ORGANISATION: MATO
-      LDAP_DOMAIN: mato.int
-      LDAP_ADMIN_PASSWORD: local-bootstrap-only
-      LDAP_TLS: "false"
-    command: ["--copy-service"]
-    volumes:
-      - ldap-data:/var/lib/ldap
-      - ldap-config:/etc/ldap/slapd.d
-      - ./infra/ldap/bootstrap:/container/service/slapd/assets/config/bootstrap/ldif/custom:ro
-    healthcheck:
-      test: ["CMD-SHELL", "ldapwhoami -x -H ldap://localhost:389 >/dev/null 2>&1"]
-      interval: 5s
-      timeout: 5s
-      retries: 20
-    networks: [mato-net]
+    networks: [orgarchive-net]
 
   archive-service:
     build: ./services/archive-service
     environment:
-      SPRING_DATASOURCE_URL: jdbc:mariadb://mariadb:3306/sctp
-      SPRING_DATASOURCE_USERNAME: sctp
-      SPRING_DATASOURCE_PASSWORD: sctp
-      LDAP_URL: ldap://ldap:389
-      LDAP_BASE: dc=mato,dc=int
+      SPRING_DATASOURCE_URL: jdbc:mariadb://mariadb:3306/orgarchive
+      SPRING_DATASOURCE_USERNAME: orgarchive
+      SPRING_DATASOURCE_PASSWORD: orgarchive
       WEAK_USER_PASSWORD: sunshine
       FINAL_FLAG: FLAG{archive-isolation-broken-by-converter}
     depends_on:
       mariadb:
         condition: service_healthy
-      ldap:
-        condition: service_healthy
-    networks: [mato-net]
+    healthcheck:
+      test: ["CMD", "curl", "-sS", "-o", "/dev/null", "http://localhost:8081/users"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks: [orgarchive-net]
 
   edge-gateway:
     build: ./services/edge-gateway
@@ -59,14 +41,17 @@ services:
       ARCHIVE_URI: http://archive-service:8081
     depends_on:
       archive-service:
-        condition: service_started
-    networks: [mato-net]
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080/"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks: [orgarchive-net]
 
 volumes:
   mariadb-data:
-  ldap-data:
-  ldap-config:
 
 networks:
-  mato-net:
+  orgarchive-net:
     driver: bridge
