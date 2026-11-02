@@ -16,7 +16,7 @@ test-java:
 	mvn -B -q -f services/archive-service/pom.xml test
 
 test-local: up
-	@curl -fsS http://localhost:8080/ >/dev/null || { echo "Start ArchiveApplication in IntelliJ or run 'make run' first"; exit 1; }
+	@curl -fsS http://localhost:8080/v3/api-docs >/dev/null || { echo "Start ArchiveApplication in IntelliJ or run 'make run' first"; exit 1; }
 	python3 postman/check_demo.py
 
 demo-reset:

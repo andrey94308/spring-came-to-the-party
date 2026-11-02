@@ -31,11 +31,14 @@ def call(method, path, expected, username=None, password=None, **kwargs):
     assert response.status_code == expected, (path, response.status_code, response.text[:300])
     return response.json() if response.content and expected in (200, 201) else None
 
-api = call('GET', '/', 200)
-assert api['service'] == 'OrgArchive'
-assert {'/', '/signup', '/users', '/users/{id}', '/organizations',
+api = call('GET', '/v3/api-docs', 200)
+assert api['info']['title'] == 'OrgArchive API'
+assert {'/signup', '/users', '/users/{id}', '/organizations',
         '/organizations/{id}', '/documents/search', '/documents/search-safe',
-        '/documents/search-debug'} == {item['path'] for item in api['endpoints']}
+        '/documents/search-debug'} <= set(api['paths'])
+assert 'post' in api['paths']['/signup']
+assert 'get' in api['paths']['/users']
+assert 'post' in api['paths']['/documents/search']
 call('GET', '/users', 401)
 username = 'user-' + uuid.uuid4().hex[:10]
 password = 'UserPass!' + uuid.uuid4().hex[:12]

@@ -1,6 +1,8 @@
 package org.orgarchive.archive.user;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.List;
 import java.util.Locale;
 import org.springframework.http.HttpStatus;
@@ -11,6 +13,8 @@ import org.springframework.web.server.ResponseStatusException;
 
 @RestController
 @RequestMapping("/users")
+@SecurityRequirement(name = "basicAuth")
+@Tag(name = "Users", description = "Administration endpoints; intended for the ADMIN role.")
 public class UserController implements AdminRoleSecurityContract<String, String, UserController.UserDto> {
     private final UserRepository users;
 

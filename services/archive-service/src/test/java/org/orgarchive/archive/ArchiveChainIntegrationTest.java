@@ -42,11 +42,22 @@ class ArchiveChainIntegrationTest {
     @Autowired UserRepository users;
 
     @Test void signupAndMethodAuthorizationBoundary() throws Exception {
-        String index = mvc.perform(get("/"))
+        String index = mvc.perform(get("/v3/api-docs"))
                 .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
-        assertThat(index).contains("/signup", "/users", "/users/{id}",
-                "/organizations", "/organizations/{id}",
-                "/documents/search", "/documents/search-safe", "/documents/search-debug");
+        JsonNode api = json.readTree(index);
+        assertThat(api.get("info").get("title").asText()).isEqualTo("OrgArchive API");
+        for (String path : new String[]{"/signup", "/users", "/users/{id}",
+                "/organizations", "/organizations/{id}", "/documents/search",
+                "/documents/search-safe", "/documents/search-debug"}) {
+            assertThat(api.get("paths").has(path)).as(path).isTrue();
+        }
+        assertThat(api.get("paths").get("/signup").has("post")).isTrue();
+        assertThat(api.get("paths").get("/signup").get("post").has("security")).isFalse();
+        assertThat(api.get("paths").get("/users").get("get").get("security").get(0)
+                .has("basicAuth")).isTrue();
+        assertThat(api.get("components").get("securitySchemes").get("basicAuth")
+                .get("scheme").asText()).isEqualTo("basic");
+        mvc.perform(get("/")).andExpect(status().isUnauthorized());
         mvc.perform(get("/users")).andExpect(status().isUnauthorized());
         String username = "user-" + UUID.randomUUID().toString().substring(0, 8);
         String password = "UserPass!234";

@@ -1,7 +1,7 @@
 # OrgArchive Postman runbook
 
 1. Run `make up` to start MariaDB, then start `ArchiveApplication` in IntelliJ (or run `make run`). The app runs at `http://localhost:8080` and seeds the database on its first start. If an older seed blocks startup, run `make demo-reset` and restart the app.
-2. Import `OrgArchive.postman_collection.json`. Requests 1–2 show the service's API index and `401` for anonymous users.
+2. Import `OrgArchive.postman_collection.json`. Request 1 reads the public OpenAPI specification at `/v3/api-docs` to show the paths and methods. Request 2 shows `401` for anonymous `/users` access.
 3. Request 3 creates a normal user; the response contains only the username. Request 4 shows that the new organization has no documents, without sending its UUID.
 4. Request 5 is the first unauthorized access: the normal user receives the admin-only user list through CVE-2025-22223. The list does not include organization UUIDs. Request 6 enables `debug=true` and exposes BCrypt hashes for all users.
 5. Explain that Anna's deliberately weak password can be matched to her leaked BCrypt hash with a short offline wordlist. The collection already contains `annaPassword=sunshine`; no cracking or manual variable entry is part of the live run.

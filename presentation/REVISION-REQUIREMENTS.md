@@ -28,13 +28,13 @@ This is an order of topics, not a commitment to six slides. The final deck shoul
 
 | Topic | File to open | Point to explain |
 | --- | --- | --- |
-| Public entry point | `services/archive-service/src/main/java/org/orgarchive/archive/ApiIndexController.java` | `GET /` lists all service routes for the demo; its `access` text is descriptive, not enforcement. |
+| Public API description | `services/archive-service/src/main/java/org/orgarchive/archive/OpenApiConfig.java` | `GET /v3/api-docs` publishes generated OpenAPI paths and methods. The Basic authentication scheme is documented; actual enforcement stays in Spring Security. |
 | Local startup | `docker-compose.yml` and `services/archive-service/src/main/resources/application.yml` | Docker runs only MariaDB on localhost:3306. Run `ArchiveApplication` from IntelliJ on localhost:8080; the Java seeder populates the database. |
 | Signup | `services/archive-service/src/main/java/org/orgarchive/archive/user/SignupController.java` | Public registration creates a regular user, hashes the password, generates an internal organization UUID, and returns only the username. |
 | HTTP authentication | `services/archive-service/src/main/java/org/orgarchive/archive/security/SecurityConfig.java` | HTTP Basic validates credentials against BCrypt hashes; `/signup` is public and protected routes require authentication. |
 | Intended admin rule | `services/archive-service/src/main/java/org/orgarchive/archive/user/AdminRoleSecurityContract.java` | The generic interface declares `@PreAuthorize("hasRole('ADMIN')")` for both list and direct lookup. |
 | User responses | `services/archive-service/src/main/java/org/orgarchive/archive/user/UserController.java` | Both responses omit organization UUIDs; `debug=true` adds password hashes to the list. Both methods implement the shared admin contract. |
-| Organization queries | `services/archive-service/src/main/java/org/orgarchive/archive/user/OrganizationController.java` | A second implementation of the admin contract. `/organizations` is reachable directly and listed by `GET /`; the Postman chain does not call it. |
+| Organization queries | `services/archive-service/src/main/java/org/orgarchive/archive/user/OrganizationController.java` | A second implementation of the admin contract. `/organizations` is listed in OpenAPI; the Postman chain does not call it. |
 | Data model | `services/archive-service/src/main/java/org/orgarchive/archive/user/User.java` and `services/archive-service/src/main/java/org/orgarchive/archive/document/Document.java` | `app_user.organization_uuid` and `document.metadata.organizationUuid` represent the same logical tenant identifier; there is no organization table or foreign key. |
 | Document search HTTP layer | `services/archive-service/src/main/java/org/orgarchive/archive/document/DocumentController.java` | Maps the three search endpoints and passes the authenticated username and metadata filters to the service. |
 | Document search service | `services/archive-service/src/main/java/org/orgarchive/archive/document/DocumentSearchService.java` | Looks up the authenticated user's organization UUID and passes it with the filters to the repository. |
@@ -50,6 +50,13 @@ This is an order of topics, not a commitment to six slides. The final deck shoul
 - Which recent PHP CVE, if any, is the intended opening reference?
 - After the code walkthrough, how many vulnerability slides are still useful before Postman?
 - Present the converter honestly as a metadata-filter translator reused from Spring AI's MariaDB vector-store module. MariaDB is vector-capable; this prototype does not perform vector search. No further vector implementation is planned for this demo.
+
+### Endpoint discovery for the presentation — implemented
+
+- Replaced the hand-written public `GET /` index with generated OpenAPI JSON at `GET /v3/api-docs`. The first Postman request reads its paths and methods. Its route list does not bypass HTTP authentication or method authorization.
+- Added the springdoc API-only starter 2.8.14, compatible with Spring Boot 3.4.x. `SecurityConfig` explicitly permits the documentation path. Swagger UI was not added because the demo reads the specification in Postman. [Springdoc compatibility and modules](https://springdoc.org/v2/).
+- Without published docs, routes can also be learned from a web or mobile client, observed HTTP traffic, public documentation, or targeted discovery. There is no standard unauthenticated HTTP call that guarantees a complete endpoint list. [OWASP API Reconnaissance](https://wstg.owasp.org/latest/4-Web_Application_Security_Testing/12-API_Testing/01-API_Reconnaissance/).
+- `localhost` is only the demo address. In the story, the attacker knows the service's public URL; knowing route names is not authorization. The presentation slides remain to be revised later.
 
 ## Code review finding: document search and the converter
 
@@ -102,7 +109,7 @@ Add answers and further requirements here as we go through the code. Do not use 
 - `UserController implements AdminRoleSecurityContract<String, String, UserDto>`. Java therefore requires `UserController` to provide `list(String filter, boolean debug)` and `get(String id)`; `@Override` asks the compiler to verify those methods. The interface does not provide reusable implementation code.
 - Spring MVC reads `@GetMapping` on the interface method and combines it with `@RequestMapping("/users")` on the controller, giving `GET /users`. No application code calls `list()` directly; Spring calls it when that HTTP route is requested.
 - The intended `ADMIN` rule is `@PreAuthorize` on the interface method. With `@EnableMethodSecurity`, Spring Security is meant to find it when invoking the concrete method. The affected Spring Security versions can miss an annotation on a parameterized interface or overridden method when the concrete target method has no annotation. This is CVE-2025-22223. It is a Spring annotation-resolution problem, not ordinary Java inheritance of annotations. [Spring advisory](https://spring.io/security/cve-2025-22223/).
-- **Revision implemented:** `AdminRoleSecurityContract<F,K,R>` now declares both `list` and `get`, each with `@PreAuthorize("hasRole('ADMIN')")`. `UserController` and `OrganizationController` both implement the contract. The organization routes are directly reachable and listed in the local API index; Postman does not use them.
+- **Revision implemented:** `AdminRoleSecurityContract<F,K,R>` now declares both `list` and `get`, each with `@PreAuthorize("hasRole('ADMIN')")`. `UserController` and `OrganizationController` both implement the contract. The organization routes are directly reachable and listed in OpenAPI; Postman does not use them.
 - Consequence: in the vulnerable Spring Security version, the inherited admin check can be skipped on **both** `GET /users` and `GET /users/{username}`. The direct lookup no longer demonstrates a protected comparison. The fixed version must reject both for a regular user. Neither user response includes organization UUIDs.
 - **Pending presentation revision:** the current slides and `SPEAKER-NOTES.de.md` still say that the direct user lookup is protected and that there is no organization controller. Update them only when the planned presentation revision begins.
 - **Naming decision:** rename the shared interface to `AdminRoleSecurityContract` so its name makes the intended role requirement explicit. This is an authorization contract; HTTP Basic authentication is configured separately in `SecurityConfig`.

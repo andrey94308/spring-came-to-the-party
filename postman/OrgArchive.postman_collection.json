@@ -24,11 +24,11 @@
   ],
   "item": [
     {
-      "name": "1 · Discover service endpoints",
+      "name": "1 · Discover endpoints in OpenAPI",
       "request": {
         "method": "GET",
-        "url": "{{baseUrl}}/",
-        "description": "The archive service lists its routes directly at localhost. Access labels describe the intended policy.",
+        "url": "{{baseUrl}}/v3/api-docs",
+        "description": "The service publishes an OpenAPI specification with paths, methods, and documented authentication. Knowing an endpoint does not grant access to it.",
         "auth": {
           "type": "noauth"
         }
@@ -41,8 +41,11 @@
             "exec": [
               "pm.response.to.have.status(200);",
               "const api = pm.response.json();",
-              "pm.expect(api.service).to.equal('OrgArchive');",
-              "['/signup','/users','/users/{id}','/organizations','/organizations/{id}','/documents/search','/documents/search-safe','/documents/search-debug'].forEach(path => pm.expect(api.endpoints.some(e => e.path === path)).to.be.true);"
+              "pm.expect(api.info.title).to.equal('OrgArchive API');",
+              "['/signup','/users','/users/{id}','/organizations','/organizations/{id}','/documents/search','/documents/search-safe','/documents/search-debug'].forEach(path => pm.expect(api.paths).to.have.property(path));",
+              "pm.expect(api.paths['/signup']).to.have.property('post');",
+              "pm.expect(api.paths['/users']).to.have.property('get');",
+              "pm.expect(api.paths['/documents/search']).to.have.property('post');"
             ]
           }
         }

@@ -1,6 +1,8 @@
 package org.orgarchive.archive.user;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -14,6 +16,8 @@ import org.springframework.web.server.ResponseStatusException;
 /** Administrative organization queries using the shared role contract. */
 @RestController
 @RequestMapping("/organizations")
+@SecurityRequirement(name = "basicAuth")
+@Tag(name = "Organizations", description = "Administration endpoints; intended for the ADMIN role.")
 public class OrganizationController implements AdminRoleSecurityContract<String, String, OrganizationController.OrganizationDto> {
     private final UserRepository users;
 
