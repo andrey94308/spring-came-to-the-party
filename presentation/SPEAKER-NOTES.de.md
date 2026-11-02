@@ -1,39 +1,63 @@
-# OrgArchive — Sprechernotizen
+# OrgArchive — Sprechernotizen (DE)
 
-## Folie 1: Wenn Schwachstellen zusammenwirken
+Kurze Punkte zum freien Sprechen. Kein Text zum Vorlesen.
 
-Guten Tag zusammen. Ich zeige heute an einem fiktiven Spring-Dienst, wie mehrere Schwachstellen zusammenwirken. OrgArchive speichert Dokumente für verschiedene Organisationen. Von außen betrachtet gibt es einen Gateway, Authentifizierung, Rollenprüfungen und eine Organisationsgrenze. Trotzdem lässt sich eine Kette bilden: Eine Schwachstelle in Spring Security, eine problematische Debug-Ausgabe, ein schwaches Laborpasswort und eine zweite Schwachstelle in Spring AI. Zuerst erkläre ich Architektur und Mechanismen. Danach zeige ich die komplette Folge direkt in Postman.
+## 1. Einstieg: Warum dieses Demo?
 
-## Folie 2: Eine plausible Anwendung, eine riskante Kette
+- Ihr habt sicher von den zwei neuen Sicherheitslücken in PHP gehört. Unter bestimmten Bedingungen konnte ein Angreifer damit ohne Login Code auf dem Server ausführen. Diesen Fall bespreche ich heute nicht.
+- Heute zeige ich ein anderes Beispiel: mein kleines Demo-Projekt OrgArchive mit zwei schon bekannten CVEs in seinen Libraries.
+- Ich starte ohne Account und ohne Login. Dann registriere ich einen normalen User. Schritt für Schritt komme ich zur User-Liste und zu allen Documents in der Datenbank.
+- Ich zeige, wie CVEs und Entscheidungen im Code zusammen den Zugriff auf diese geschützten Daten ermöglichen.
+- Zuerst erkläre ich das Projekt und seine Security. Danach zeige ich wichtige Stellen im Code und die Requests in Postman.
 
-Die zentrale Frage lautet nicht, ob ein einzelner Fehler sofort alles kompromittiert. Die Anwendung sieht zunächst vergleichsweise ordentlich aus: Nur der Gateway ist von außen erreichbar, geschützte Routen verlangen eine Anmeldung und die Organisation des Benutzers wird serverseitig gelesen. Die beiden Bibliothekslücken wirken aber auf unterschiedlichen Ebenen. Dazwischen liegt eine scheinbar weniger kritische Entscheidung im Anwendungscode. Erst zusammen führen diese Punkte vom normalen Besucher zu Dokumenten anderer Organisationen. Für die Bewertung einer CVE muss man deshalb die tatsächlich eingesetzte Version, den betroffenen Codepfad und mögliche Folgeschritte prüfen.
+## 2. OrgArchive: Daten und Suche
 
-## Folie 3: OrgArchive: Aufbau und Daten
+- In OrgArchive speichern verschiedene Organizations ihre Documents.
+- Ein User soll nur Documents seiner eigenen Organization sehen. Ein Admin kann Users und Organizations ansehen.
+- User und Document haben beide eine eigene Spalte `organizationUuid`. Sie zeigt die Organization an. Sie ist kein Passwort. In den JSON-Metadaten des Documents stehen `category` und `revision`.
+- MariaDB 11.8 kann Vektoren speichern. Später könnte man ähnliche Documents über ihren Text suchen.
+- Im Demo gibt es noch keine Vektorsuche. Die Suche nutzt genaue Filter auf Metadaten: `category` und `minRevision`.
+- Spring AI übersetzt eine `Filter.Expression` in eine SQL-Bedingung für MariaDB. Der Converter kommt aus dem Modul für Vektorsuche. Hier nutzen wir ihn nur für Metadaten-Filter.
 
-OrgArchive ist ein fiktiver Dienst, in dem Organisationen Dokumente ablegen. Der Client spricht mit dem Edge Gateway auf Port 8080. Nur dieser Port ist nach außen veröffentlicht. Der Gateway routet die API an den internen Archive Service; dieser authentifiziert HTTP Basic gegen BCrypt-Hashes in MariaDB. In der Datenbank gibt es die Tabellen app_user und document. Eine eigene Organisationstabelle existiert nicht. app_user trägt eine organization_uuid-Spalte; Dokumente speichern denselben Wert als organizationUuid im JSON-Feld metadata. Bei der Registrierung erstellt der Server eine zufällige UUID und gibt sie direkt zurück. Sie ist ein Identifikator, kein Geheimnis und kein Ersatz für die Berechtigungsprüfung. Die Verbindung der beiden Werte ist eine logische Mandantenzuordnung, kein Datenbank-Foreign-Key.
+## 3. API: Welche Endpoints gibt es?
 
-## Folie 4: Endpunkte und beabsichtigter Zugriff
+- Der Aufbau ist einfach: Postman → Archive Service auf `localhost:8080` → MariaDB in Docker.
+- `GET /v3/api-docs` liefert die OpenAPI-Spezifikation. Dort sehen wir Pfade und HTTP-Methoden. Die Liste gibt keinen Zugriff auf geschützte Daten.
+- `POST /signup` ist öffentlich. Der Server erstellt einen User und eine neue interne `organizationUuid`. Die Antwort enthält nur den Username.
+- `GET /users` und `GET /users/{id}` sind für Admins gedacht. `GET /organizations` und `GET /organizations/{id}` nutzen dieselbe Regel.
+- `POST /documents/search` ist für Users. Der Server liest die Organization-UUID aus dem Account, nicht aus dem Request.
+- Mit `search-safe` zeige ich später den sicheren Vergleich. `search-debug` gibt es für das Demo, aber wir brauchen es nicht in der Hauptkette.
 
-Auf dem öffentlichen Gateway-Index unter GET / stehen die Routen und beschreibende access-Texte. Dieser Index ist eine Hilfe für die Präsentation; die Texte sind keine Security-Konfiguration. Ohne Index könnte man wahrscheinliche Pfade etwa aus Dokumentation, Client-Code oder beobachtetem Verkehr ableiten, aber nicht automatisch eine vollständige Liste erhalten. Im Archive Service sind /users und /documents auf HTTP-Ebene nur für angemeldete Anfragen freigeschaltet. Die Rollenprüfung erfolgt zusätzlich an Methoden. Für die Liste /users ist ADMIN vorgesehen. Die direkte Benutzerabfrage /users/{username} trägt ihre Annotation auf der konkreten Methode und bleibt geschützt. Beide Benutzerantworten enthalten keine Organisations-UUID. Einen Endpunkt für eine Organisationsliste gibt es nicht. Die Dokumentsuche verlangt ROLE_USER und verwendet die gespeicherte organizationUuid des Kontos. Der Request enthält ebenfalls einen organizationUuid-Filter; dieser Wert erteilt selbst keine Berechtigung. /search-safe und /search-debug sind zusätzliche Routen für den Vergleich im Demo.
+## 4. Code: Wo wird der Zugriff geprüft?
 
-## Folie 5: CVE-2025-22223: Die Admin-Regel wird übersehen
+- Ich öffne `SecurityConfig`. HTTP Basic prüft Username und Passwort. Ohne Login sind nur `/signup` und OpenAPI erreichbar.
+- Für `/users`, `/organizations` und `/documents` verlangt der HTTP-Filter einen Login. Danach prüft die Methode die Rolle.
+- Ich öffne `AdminRoleSecurityContract`. Das Interface definiert `list` und `get`. Beide Methoden haben `@PreAuthorize("hasRole('ADMIN')")`.
+- `UserController` und `OrganizationController` implementieren dieses Interface. So sollen beide dieselbe Admin-Regel nutzen.
+- Ich öffne `DocumentController`: Für die Suche braucht man die Rolle `USER`. In `DocumentSearchService` kommt die Organization-UUID aus dem Account des Users.
+- Passwörter liegen als BCrypt-Hashes in der Datenbank. Spring Security prüft die Rollen `USER` und `ADMIN`.
 
-Die erste CVE betrifft die Suche nach Methoden-Sicherheitsannotationen. In unserem Projekt ist @EnableMethodSecurity aktiv. Das generische Interface AdminQuery<F,R> deklariert list und trägt dort @PreAuthorize("hasRole('ADMIN')"). UserController implementiert dieses Interface, aber seine konkrete list-Methode hat keine eigene Annotation. In den betroffenen Spring-Security-Versionen 6.4.0 bis 6.4.3 wird die geerbte Annotation auf parameterisierten Typen unter diesen Bedingungen nicht zuverlässig gefunden. Wichtig: Der HTTP-Filter fordert für /users weiter eine Anmeldung. Der Angreifer registriert deshalb ein normales ROLE_USER-Konto und ruft erst dann die Liste auf. Er erhält dadurch keine ADMIN-Rolle und sieht zunächst keine Organisations-UUID. Die direkt annotierte Route /users/anna antwortet weiterhin mit 403. Spring Security 6.4.4 behebt die CVE; alternativ kann die Annotation auf der Zielmethode stehen.
-Quelle: https://spring.io/security/cve-2025-22223/
+## 5. Code: Der Debug-Fehler
 
-## Folie 6: CVE-2026-22730: Ein Filter verändert SQL
+- In `UserController` gibt `GET /users` keine Passwörter zurück. Mit `GET /users?debug=true` enthält die Antwort aber `passwordHash` für jeden User.
+- Diesen Fehler habe ich für das Demo eingebaut. Älteren Debug-Code dieser Art kann man auch in echten Projekten finden.
+- Zuerst wirkt das Risiko klein: Der Endpoint ist für Admins gedacht. Außerdem sind es Hashes und keine Passwörter im Klartext.
 
-Die zweite CVE liegt in Spring AI MariaDB Store, nicht im MariaDB-Server. In diesem Demo läuft kein KI-Modell und keine Vektorsuche; wir verwenden nur den Metadatenfilter-Konverter aus der Spring-AI-Bibliothek. Unser Archive Service verwendet Version 1.0.3 und ruft MariaDBFilterExpressionConverter für einen Metadatenfilter auf. Die zulässige organizationUuid stammt aus dem gespeicherten Benutzerkonto und wird als JDBC-Parameter gebunden. Zusätzlich soll ein Filter aus dem Request ausgewertet werden. Der Converter setzt dessen String-Wert jedoch ohne korrektes Escaping in ein SQL-Fragment ein. Der Angreifer kennt nur die UUID seiner eigenen Registrierung. Mit dieser UUID und dem Suffix ' OR '1'='1 verlässt das Anführungszeichen den String und ergänzt eine OR-Bedingung. Da SQL AND vor OR auswertet, kann dieser Teil die vorherige Organisationsbedingung überstimmen. Die Anwendung gibt dann Dokumente anderer Organisationen und deren UUIDs zurück. Die Route /documents/search-safe ist nur ein eigener Vergleich im Demo-Projekt: Sie bindet beide Werte und liefert für denselben manipulierten Input keine fremden Treffer. Das ist keine gepatchte Spring-AI-Implementierung. Spring AI 1.0.4 behebt die CVE im 1.0-Zweig.
-Quelle: https://spring.io/security/cve-2026-22730/
+## 6. Zwei CVEs und die Angriffskette
 
-## Folie 7: Die zusätzliche Schwachstelle im Projekt
+- CVE-2025-22223: Unsere Spring-Security-Version findet `@PreAuthorize` auf dem generischen Interface unter diesen Bedingungen nicht.
+- Der HTTP-Filter verlangt weiter einen Login. Aber ein normaler `USER` kann `/users` ohne `ADMIN`-Rolle lesen. Das ist der erste Zugriff ohne die nötige Berechtigung.
+- Mit `debug=true` sehe ich Annas Hash. Ihr schwaches Passwort kann man offline mit einer kurzen Wortliste finden. Für das Demo steht es schon in Postman.
+- Mit Annas Account suche ich nach `category=report`. Die normale Suche zeigt nur Documents ihrer Organization.
+- CVE-2026-22730: Der Spring-AI-Converter setzt den Wert von `category` ohne korrektes Escaping in SQL ein. Eine zusätzliche `OR`-Bedingung umgeht den Filter für die Organization.
+- Nach der Injection sehe ich Documents anderer Organizations. `search-safe` bindet die Werte als SQL-Parameter. Derselbe Input liefert dort eine leere Liste.
 
-Neben den beiden Bibliotheks-CVEs gibt es eine bewusst eingebaute Fehlentscheidung in der Anwendung. Die normale Benutzerliste enthält nur Kontodaten, aber mit debug=true auch passwordHash. Das könnte im Review zunächst als weniger kritisch erscheinen: Der Endpunkt soll nur für Administratoren erreichbar sein und der gespeicherte Wert ist ein BCrypt-Hash, kein Klartextpasswort. Die Kombination ändert die Bewertung. Durch CVE-2025-22223 erreicht ein normales angemeldetes Konto die Liste und kann den Hash von Anna lesen. Im Labor ist Annas Passwort absichtlich schwach und lässt sich mit einer kurzen lokalen Wortliste offline finden. Das ist kein Bruch von BCrypt; ein starkes Passwort würde diesen Schritt deutlich erschweren. Die Debug-Ausgabe und das schwache Passwort sind separate Anwendungsschwächen, keine CVEs. Der ursprüngliche Besucher bekommt keine Admin-Rolle. In der Live-Demo ist Annas Laborpasswort bereits in der Postman Collection hinterlegt. Nach dem Wechsel zu Annas Konto zeigen wir direkt die Dokumentsuche.
+## 7. Postman und Fazit
 
-## Folie 8: Live-Demo in Postman
+- In Postman zeige ich zuerst OpenAPI, dann `401` für einen anonymen Request an `/users` und danach das Signup eines normalen Users.
+- Ich zeige die leere Suche für die neue Organization. Danach zeige ich den ersten Zugriff auf die Admin-Liste und die Hashes mit dem Debug-Flag.
+- Dann nutze ich Annas Account: normale Suche, SQL-Injection und derselbe Input in `search-safe`.
+- Mein Fazit: Bei einer CVE prüfe ich die Library-Version, den betroffenen Code im eigenen Projekt und die nächsten möglichen Schritte.
+- Der alte Debug-Fehler und das schwache Passwort machen die erste CVE gefährlicher. Deshalb müssen wir Libraries updaten und solche Fehler im Code entfernen.
 
-Jetzt wechsle ich vom Foliensatz zur Postman Collection mit neun Requests. Zuerst zeigt GET / den öffentlichen Demo-Index. Eine anonyme Anfrage an /users liefert 401. Danach registrieren wir einen normalen Benutzer. Der Signup-Response enthält eine neue organizationUuid. Die Suche nach Dokumenten dieser UUID liefert eine leere Liste. Request 5 ist der erste unberechtigte Zugriff: Das normale Konto erhält durch CVE-2025-22223 die für ADMIN vorgesehene Benutzerliste. Die Liste enthält keine Organisations-UUID. Request 6 verwendet debug=true und zeigt Passwort-Hashes für alle Benutzer. Ich erkläre, dass ein Offline-Vergleich mit einer kurzen Liste schwacher Passwörter für Annas Hash den Laborwert sunshine ergibt; diesen Vergleich führe ich hier nicht live aus. Das Passwort ist bereits als annaPassword in der Collection gespeichert. Request 7 sucht als Anna mit der UUID unserer eigenen Registrierung und findet nichts. Request 8 hängt an genau diese bekannte UUID eine SQL-Bedingung und erhält fremde Dokumente samt UUIDs. Request 9 zeigt, dass derselbe Wert bei der parametrisierten Abfrage keine Treffer liefert.
-
-## Folie 9: Fazit: Risiken entstehen in Kombination
-
-Für mich zeigt dieses Beispiel vor allem, warum man Schwachstellen nicht isoliert als CVE-Nummern betrachten sollte. Entscheidend ist, ob die betroffene Version tatsächlich eingesetzt wird und ob der gefährdete Codepfad in der eigenen Architektur erreichbar ist. Auf dieser Grundlage lässt sich die Dringlichkeit eines Updates begründen. Ebenso wichtig sind Entscheidungen im eigenen Code, die vielleicht lange als unproblematisch galten: ein Debug-Schalter, der sensible Felder ausgibt, ein schwaches Passwort oder das Anhängen eines SQL-Fragments. Solche Altlasten können über Jahre bestehen bleiben. Eine neue Bibliothekslücke macht sie dann plötzlich zu einem wichtigen Teil einer größeren Angriffskette. Konkret würde ich hier Spring Security und Spring AI aktualisieren, die ADMIN-Regel auf die konkrete Methode setzen, Passwort-Hashes aus API-Antworten entfernen und SQL-Werte binden. Vielen Dank – ich freue mich auf Fragen.
+Quelle für den Einstieg: [PHP Security Advisory vom 21. Oktober 2026](https://www.php.net/archive/2026.php).

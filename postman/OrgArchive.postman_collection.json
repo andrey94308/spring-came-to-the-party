@@ -298,7 +298,7 @@
               "pm.response.to.have.status(200);",
               "const docs = pm.response.json();",
               "pm.expect(docs).to.be.an('array').that.is.not.empty;",
-              "const organizations = new Set(docs.map(d => JSON.parse(d.metadata).organizationUuid));",
+              "const organizations = new Set(docs.map(d => d.organizationUuid));",
               "pm.expect(organizations.size).to.equal(1);",
               "pm.expect(docs.every(d => JSON.parse(d.metadata).category === 'report')).to.be.true;"
             ]
@@ -351,7 +351,7 @@
             "exec": [
               "pm.response.to.have.status(200);",
               "const docs = pm.response.json();",
-              "const organizations = new Set(docs.map(d => JSON.parse(d.metadata).organizationUuid));",
+              "const organizations = new Set(docs.map(d => d.organizationUuid));",
               "pm.expect(organizations.size).to.be.at.least(5);",
               "pm.expect(pm.response.text()).to.include('FLAG{archive-isolation-broken-by-converter}');"
             ]

@@ -145,6 +145,8 @@ class ArchiveChainIntegrationTest {
         assertThat(json.readTree(filtered).size()).isGreaterThan(0);
         for (JsonNode doc : json.readTree(filtered)) {
             assertThat(doc.get("metadata").asText()).contains("\"category\":\"report\"");
+            assertThat(json.readTree(doc.get("metadata").asText()).has("organizationUuid")).isFalse();
+            assertThat(doc.get("organizationUuid").asText()).isEqualTo(annaUuid);
             assertThat(json.readTree(doc.get("metadata").asText()).get("revision").asInt()).isGreaterThanOrEqualTo(5);
         }
         String revisionOnly = mvc.perform(post("/documents/search")
@@ -155,7 +157,8 @@ class ArchiveChainIntegrationTest {
         assertThat(json.readTree(revisionOnly).size()).isGreaterThan(0);
         for (JsonNode doc : json.readTree(revisionOnly)) {
             JsonNode metadata = json.readTree(doc.get("metadata").asText());
-            assertThat(metadata.get("organizationUuid").asText()).isEqualTo(annaUuid);
+            assertThat(metadata.has("organizationUuid")).isFalse();
+            assertThat(doc.get("organizationUuid").asText()).isEqualTo(annaUuid);
             assertThat(metadata.get("revision").asInt()).isGreaterThanOrEqualTo(10);
         }
         assertThat(search("/documents/search", "report' OR '1'='1"))

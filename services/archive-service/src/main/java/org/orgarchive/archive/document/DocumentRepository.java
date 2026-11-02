@@ -13,11 +13,11 @@ import org.springframework.transaction.annotation.Transactional;
 @Repository
 public class DocumentRepository {
 
-    private static final String SELECT = "SELECT id, title, content, metadata FROM document WHERE ";
-    private static final String ORGANIZATION = "JSON_VALUE(metadata, '$.organizationUuid') = ?";
+    private static final String SELECT = "SELECT id, title, content, organization_uuid, metadata FROM document WHERE ";
+    private static final String ORGANIZATION = "organization_uuid = ?";
     private static final RowMapper<DocumentDto> DOCUMENT_ROW = (rs, i) -> new DocumentDto(
             rs.getLong("id"), rs.getString("title"), rs.getString("content"),
-            rs.getString("metadata"));
+            rs.getString("organization_uuid"), rs.getString("metadata"));
 
     private final EntityManager entityManager;
     private final JdbcTemplate jdbc;

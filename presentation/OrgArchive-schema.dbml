@@ -1,6 +1,6 @@
 Project OrgArchive {
   database_type: 'MariaDB'
-  Note: 'organization_uuid is a logical tenant identifier. There is no organization table or foreign key to document metadata.'
+  Note: 'organization_uuid identifies the tenant on both users and documents. There is no separate organization table.'
 }
 
 Table app_user {
@@ -16,5 +16,10 @@ Table document {
   id bigint [pk, increment]
   title varchar(255) [not null]
   content text [not null]
-  metadata text [not null, note: 'JSON with organizationUuid, category and revision']
+  organization_uuid varchar(36) [not null]
+  metadata text [not null, note: 'JSON with category and revision']
+
+  Indexes {
+    organization_uuid [name: 'idx_document_organization']
+  }
 }

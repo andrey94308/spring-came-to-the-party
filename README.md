@@ -1,6 +1,6 @@
 # OrgArchive
 
-A local document archive for several organizations. Public signup assigns a new organization UUID, which stays in the user's account; document searches derive it from authentication. The lab runs MariaDB 11.8, which supports vectors, although this application currently uses metadata filtering rather than vector search. This lab demonstrates two independent library vulnerabilities in one Postman chain: a Spring Security method-authorization bypass and a Spring AI SQL injection.
+A local document archive for several organizations. Public signup assigns a new organization UUID to the user's account; each document stores its organization UUID in a separate database column. Document searches derive the allowed UUID from authentication. The lab runs MariaDB 11.8, which supports vectors, although this application currently uses metadata filtering rather than vector search. This lab demonstrates two independent library vulnerabilities in one Postman chain: a Spring Security method-authorization bypass and a Spring AI SQL injection.
 
 ## Run
 
@@ -11,6 +11,8 @@ make up
 ```
 
 Run `org.orgarchive.archive.ArchiveApplication` from IntelliJ, or use `make run`. Its defaults connect to MariaDB at `localhost:3306` and serve the API at <http://localhost:8080>. Hibernate creates the tables and `Seeder` inserts demo data on the first application start; the database container does not seed the records itself.
+
+Existing lab volumes are migrated on application startup: document organization UUIDs move from JSON metadata into `document.organization_uuid`, while `category` and `revision` stay in the metadata. No volume reset is needed for this change.
 
 Import [OrgArchive.postman_collection.json](postman/OrgArchive.postman_collection.json) into Postman and run its 9 requests in order. The service publishes an OpenAPI specification at <http://localhost:8080/v3/api-docs>; the first request reads its paths and methods. This documents routes but does not grant access to them. Anna's weak lab password is already set in the collection's `annaPassword` variable, so the presentation does not pause for a cracking step. Request 6 exposes the users' BCrypt hashes. Signup generates a new username and password for the demo; the server assigns an internal organization UUID.
 

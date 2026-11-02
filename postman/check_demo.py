@@ -62,12 +62,13 @@ anna_password = 'sunshine'
 assert bcrypt.checkpw(anna_password.encode(), anna['passwordHash'].encode())
 anna_documents = call('POST', '/documents/search', 200, 'anna', anna_password,
                       json={'category': 'report'})
-assert anna_documents and len({json.loads(doc['metadata'])['organizationUuid'] for doc in anna_documents}) == 1
+assert anna_documents and len({doc['organizationUuid'] for doc in anna_documents}) == 1
 assert all(json.loads(doc['metadata'])['category'] == 'report' for doc in anna_documents)
+assert all('organizationUuid' not in json.loads(doc['metadata']) for doc in anna_documents)
 payload = "report' OR '1'='1"
 injected = call('POST', '/documents/search', 200, 'anna', anna_password,
                 json={'category': payload})
-organizations = {json.loads(doc['metadata'])['organizationUuid'] for doc in injected}
+organizations = {doc['organizationUuid'] for doc in injected}
 assert len(organizations) >= 5
 assert any('FLAG{archive-isolation-broken-by-converter}' in doc['content'] for doc in injected)
 assert call('POST', '/documents/search-safe', 200, 'anna', anna_password,
