@@ -1,15 +1,12 @@
 # OrgArchive — Folienplan
 
-Die PowerPoint-Datei enthält neun vollständig editierbare Folien. Der Vortragstext steht in den eingebetteten Notizen und in `SPEAKER-NOTES.de.md`.
+Die sechs Folien in `OrgArchive-editable.pptx` sind editierbar. Text, Kästen und Verbindungen bestehen aus PowerPoint-Objekten. Die deutschen Sprechernotizen stehen auch in `SPEAKER-NOTES.de.md`.
 
-1. **Wenn Schwachstellen zusammenwirken**
-2. **Eine plausible Anwendung, eine riskante Kette**
-3. **OrgArchive: Aufbau und Daten**
-4. **Endpunkte und beabsichtigter Zugriff**
-5. **CVE-2025-22223: Die Admin-Regel wird übersehen**
-6. **CVE-2026-22730: Ein Filter verändert SQL**
-7. **Die zusätzliche Schwachstelle im Projekt**
-8. **Live-Demo in Postman**
-9. **Fazit: Risiken entstehen in Kombination**
+1. **Wenn Schwachstellen zusammenwirken** — kurze Einleitung und Ziel des Demos.
+2. **OrgArchive: Daten und Endpoints** — eine Übersicht für Architektur, API, Users und Documents.
+3. **Zugriff: HTTP-Filter und Rollen** — eigene Grafik für `SecurityConfig`, `AdminRoleSecurityContract`, `DocumentController` und die Organization-Grenze.
+4. **CVE-2025-22223** — übersehene Admin-Regel und Debug-Flag.
+5. **CVE-2026-22730** — SQL-Injection im Metadatenfilter und Vergleich mit `search-safe`.
+6. **Fazit** — Dependencies prüfen, betroffene Codepfade testen, Legacy-Code beachten.
 
-Die Live-Demo beginnt nach Folie 8; Folie 9 dient als Abschluss.
+Die Postman-Demo folgt auf Folie 5. Folie 6 schließt den Vortrag ab.

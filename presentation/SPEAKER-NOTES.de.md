@@ -14,10 +14,10 @@ Kurze Punkte zum freien Sprechen. Kein Text zum Vorlesen.
 
 - In OrgArchive speichern verschiedene Organizations ihre Documents.
 - Ein User soll nur Documents seiner eigenen Organization sehen. Ein Admin kann Users und Organizations ansehen.
-- User und Document haben beide eine eigene Spalte `organizationUuid`. Sie zeigt die Organization an. Sie ist kein Passwort. In den JSON-Metadaten des Documents stehen `category` und `revision`.
-- MariaDB 11.8 kann Vektoren speichern. Später könnte man ähnliche Documents über ihren Text suchen.
-- Im Demo gibt es noch keine Vektorsuche. Die Suche nutzt genaue Filter auf Metadaten: `category` und `minRevision`.
-- Spring AI übersetzt eine `Filter.Expression` in eine SQL-Bedingung für MariaDB. Der Converter kommt aus dem Modul für Vektorsuche. Hier nutzen wir ihn nur für Metadaten-Filter.
+- User und Document haben beide eine eigene Spalte `organizationUuid`. Sie verbindet sie mit der Organization. In den JSON-Metadaten des Documents stehen `category` und `revision`.
+- Ich habe MariaDB 11.8 gewählt, weil sie Vektoren unterstützt. So könnte ich später ähnliche Documents anhand ihres Textes finden.
+- Aus demselben Grund nutze ich Spring AI. Es kann ein Modell für Textvektoren mit MariaDB und der Suche verbinden.
+- Im aktuellen Projekt nutze ich nur einen kleinen Teil von Spring AI: den Filter für Metadaten. Eine Vektorsuche gibt es noch nicht.
 
 ## 3. API: Welche Endpoints gibt es?
 
@@ -43,21 +43,17 @@ Kurze Punkte zum freien Sprechen. Kein Text zum Vorlesen.
 - Diesen Fehler habe ich für das Demo eingebaut. Älteren Debug-Code dieser Art kann man auch in echten Projekten finden.
 - Zuerst wirkt das Risiko klein: Der Endpoint ist für Admins gedacht. Außerdem sind es Hashes und keine Passwörter im Klartext.
 
-## 6. Zwei CVEs und die Angriffskette
+## 6. Zwei CVEs
 
 - CVE-2025-22223: Unsere Spring-Security-Version findet `@PreAuthorize` auf dem generischen Interface unter diesen Bedingungen nicht.
 - Der HTTP-Filter verlangt weiter einen Login. Aber ein normaler `USER` kann `/users` ohne `ADMIN`-Rolle lesen. Das ist der erste Zugriff ohne die nötige Berechtigung.
-- Mit `debug=true` sehe ich Annas Hash. Ihr schwaches Passwort kann man offline mit einer kurzen Wortliste finden. Für das Demo steht es schon in Postman.
-- Mit Annas Account suche ich nach `category=report`. Die normale Suche zeigt nur Documents ihrer Organization.
 - CVE-2026-22730: Der Spring-AI-Converter setzt den Wert von `category` ohne korrektes Escaping in SQL ein. Eine zusätzliche `OR`-Bedingung umgeht den Filter für die Organization.
-- Nach der Injection sehe ich Documents anderer Organizations. `search-safe` bindet die Werte als SQL-Parameter. Derselbe Input liefert dort eine leere Liste.
+- Nach der Injection sehe ich Documents anderer Organizations.
 
-## 7. Postman und Fazit
+## 7. Fazit
 
-- In Postman zeige ich zuerst OpenAPI, dann `401` für einen anonymen Request an `/users` und danach das Signup eines normalen Users.
-- Ich zeige die leere Suche für die neue Organization. Danach zeige ich den ersten Zugriff auf die Admin-Liste und die Hashes mit dem Debug-Flag.
-- Dann nutze ich Annas Account: normale Suche, SQL-Injection und derselbe Input in `search-safe`.
-- Mein Fazit: Bei einer CVE prüfe ich die Library-Version, den betroffenen Code im eigenen Projekt und die nächsten möglichen Schritte.
-- Der alte Debug-Fehler und das schwache Passwort machen die erste CVE gefährlicher. Deshalb müssen wir Libraries updaten und solche Fehler im Code entfernen.
+- Ich prüfe regelmäßig meine Dependencies und neue CVEs.
+- Ich schaue auf den konkreten Code im Projekt. So kann ich das Risiko bewerten und wichtige Updates zuerst machen.
+- Alte Legacy-Entscheidungen können zusammen mit einer neuen CVE zu einem ernsten Problem werden.
 
 Quelle für den Einstieg: [PHP Security Advisory vom 21. Oktober 2026](https://www.php.net/archive/2026.php).
