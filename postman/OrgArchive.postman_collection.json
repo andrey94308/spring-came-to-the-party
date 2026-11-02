@@ -6,7 +6,7 @@
   },
   "variable": [
     {
-      "key": "gatewayUrl",
+      "key": "baseUrl",
       "value": "http://localhost:8080"
     },
     {
@@ -24,11 +24,11 @@
   ],
   "item": [
     {
-      "name": "1 · Discover API endpoints",
+      "name": "1 · Discover service endpoints",
       "request": {
         "method": "GET",
-        "url": "{{gatewayUrl}}/",
-        "description": "",
+        "url": "{{baseUrl}}/",
+        "description": "The archive service lists its routes directly at localhost. Access labels describe the intended policy.",
         "auth": {
           "type": "noauth"
         }
@@ -42,7 +42,7 @@
               "pm.response.to.have.status(200);",
               "const api = pm.response.json();",
               "pm.expect(api.service).to.equal('OrgArchive');",
-              "['/signup','/users','/documents/search'].forEach(path => pm.expect(api.endpoints.some(e => e.path === path)).to.be.true);"
+              "['/signup','/users','/users/{id}','/organizations','/organizations/{id}','/documents/search','/documents/search-safe','/documents/search-debug'].forEach(path => pm.expect(api.endpoints.some(e => e.path === path)).to.be.true);"
             ]
           }
         }
@@ -52,7 +52,7 @@
       "name": "2 · Anonymous /users → 401",
       "request": {
         "method": "GET",
-        "url": "{{gatewayUrl}}/users",
+        "url": "{{baseUrl}}/users",
         "description": "",
         "auth": {
           "type": "noauth"
@@ -74,7 +74,7 @@
       "name": "3 · Sign up as a normal user",
       "request": {
         "method": "POST",
-        "url": "{{gatewayUrl}}/signup",
+        "url": "{{baseUrl}}/signup",
         "description": "",
         "auth": {
           "type": "noauth"
@@ -125,7 +125,7 @@
       "name": "4 · My organization documents → empty",
       "request": {
         "method": "POST",
-        "url": "{{gatewayUrl}}/documents/search",
+        "url": "{{baseUrl}}/documents/search",
         "description": "The server determines our organization from the authenticated account. A new organization has no documents.",
         "auth": {
           "type": "basic",
@@ -175,7 +175,7 @@
       "name": "5 · CVE 1 · Normal user accesses admin /users",
       "request": {
         "method": "GET",
-        "url": "{{gatewayUrl}}/users",
+        "url": "{{baseUrl}}/users",
         "description": "First unauthorized access: the newly registered USER receives the admin-only user list because CVE-2025-22223 skips the inherited role check.",
         "auth": {
           "type": "basic",
@@ -215,7 +215,7 @@
       "name": "6 · Users with debug flag → password hashes",
       "request": {
         "method": "GET",
-        "url": "{{gatewayUrl}}/users?debug=true",
+        "url": "{{baseUrl}}/users?debug=true",
         "description": "The debug=true flag exposes BCrypt hashes for every user. Anna’s weak password is already stored in the collection variable annaPassword for the next requests.",
         "auth": {
           "type": "basic",
@@ -253,7 +253,7 @@
       "name": "7 · Anna searches her report documents",
       "request": {
         "method": "POST",
-        "url": "{{gatewayUrl}}/documents/search",
+        "url": "{{baseUrl}}/documents/search",
         "description": "Anna sees only report documents from her own organization. No organization UUID is sent.",
         "auth": {
           "type": "basic",
@@ -307,7 +307,7 @@
       "name": "8 · CVE 2 · SQL injection reveals other organizations",
       "request": {
         "method": "POST",
-        "url": "{{gatewayUrl}}/documents/search",
+        "url": "{{baseUrl}}/documents/search",
         "description": "The category metadata filter contains an SQL payload. Anna’s organization is still loaded from her account, but the generated filter bypasses that condition.",
         "auth": {
           "type": "basic",
@@ -360,7 +360,7 @@
       "name": "9 · Safe search with the same input → empty",
       "request": {
         "method": "POST",
-        "url": "{{gatewayUrl}}/documents/search-safe",
+        "url": "{{baseUrl}}/documents/search-safe",
         "description": "The same category is bound as data, so it cannot alter the SQL query.",
         "auth": {
           "type": "basic",

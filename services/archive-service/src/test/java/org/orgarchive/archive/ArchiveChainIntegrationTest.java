@@ -42,6 +42,11 @@ class ArchiveChainIntegrationTest {
     @Autowired UserRepository users;
 
     @Test void signupAndMethodAuthorizationBoundary() throws Exception {
+        String index = mvc.perform(get("/"))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        assertThat(index).contains("/signup", "/users", "/users/{id}",
+                "/organizations", "/organizations/{id}",
+                "/documents/search", "/documents/search-safe", "/documents/search-debug");
         mvc.perform(get("/users")).andExpect(status().isUnauthorized());
         String username = "user-" + UUID.randomUUID().toString().substring(0, 8);
         String password = "UserPass!234";

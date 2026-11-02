@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Exercise the OrgArchive chain through its public gateway."""
+"""Exercise the locally running OrgArchive service."""
 import base64
 import json
 import os
@@ -9,7 +9,7 @@ import uuid
 import bcrypt
 import requests
 
-BASE = os.getenv('GATEWAY_URL', 'http://localhost:8080')
+BASE = os.getenv('BASE_URL', 'http://localhost:8080')
 
 def credentials(username, password):
     encoded = base64.b64encode(f'{username}:{password}'.encode()).decode()
@@ -33,7 +33,9 @@ def call(method, path, expected, username=None, password=None, **kwargs):
 
 api = call('GET', '/', 200)
 assert api['service'] == 'OrgArchive'
-assert {'/signup', '/users', '/documents/search'} <= {item['path'] for item in api['endpoints']}
+assert {'/', '/signup', '/users', '/users/{id}', '/organizations',
+        '/organizations/{id}', '/documents/search', '/documents/search-safe',
+        '/documents/search-debug'} == {item['path'] for item in api['endpoints']}
 call('GET', '/users', 401)
 username = 'user-' + uuid.uuid4().hex[:10]
 password = 'UserPass!' + uuid.uuid4().hex[:12]

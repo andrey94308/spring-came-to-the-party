@@ -7,52 +7,15 @@ services:
       MARIADB_USER: orgarchive
       MARIADB_PASSWORD: orgarchive
       MARIADB_AUTO_UPGRADE: "1"
+    ports:
+      - "127.0.0.1:3306:3306"
     volumes:
       - mariadb-data:/var/lib/mysql
-      - ./infra/mariadb/init:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
       interval: 5s
       timeout: 5s
       retries: 20
-    networks: [orgarchive-net]
-
-  archive-service:
-    build: ./services/archive-service
-    environment:
-      SPRING_DATASOURCE_URL: jdbc:mariadb://mariadb:3306/orgarchive
-      SPRING_DATASOURCE_USERNAME: orgarchive
-      SPRING_DATASOURCE_PASSWORD: orgarchive
-      WEAK_USER_PASSWORD: sunshine
-      FINAL_FLAG: FLAG{archive-isolation-broken-by-converter}
-    depends_on:
-      mariadb:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "curl", "-sS", "-o", "/dev/null", "http://localhost:8081/users"]
-      interval: 5s
-      timeout: 5s
-      retries: 20
-    networks: [orgarchive-net]
-
-  edge-gateway:
-    build: ./services/edge-gateway
-    ports: ["8080:8080"]
-    environment:
-      ARCHIVE_URI: http://archive-service:8081
-    depends_on:
-      archive-service:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "curl", "-fsS", "http://localhost:8080/"]
-      interval: 5s
-      timeout: 5s
-      retries: 20
-    networks: [orgarchive-net]
 
 volumes:
   mariadb-data:
-
-networks:
-  orgarchive-net:
-    driver: bridge

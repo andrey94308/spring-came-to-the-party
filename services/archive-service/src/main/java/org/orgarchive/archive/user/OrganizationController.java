@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
-/** Internal administrative queries. The gateway does not route /organizations. */
+/** Administrative organization queries using the shared role contract. */
 @RestController
 @RequestMapping("/organizations")
 public class OrganizationController implements AdminRoleSecurityContract<String, String, OrganizationController.OrganizationDto> {

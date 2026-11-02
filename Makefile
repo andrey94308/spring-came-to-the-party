@@ -1,28 +1,31 @@
-.PHONY: up down build test-java test-local demo-reset clean logs
-SERVICES := edge-gateway archive-service
+.PHONY: up down build run test-java test-local demo-reset clean logs
 
 up:
-	docker compose up -d --build --wait
+	docker compose up -d --wait
 
 down:
 	docker compose down
 
 build:
-	docker compose build
+	mvn -B -q -f services/archive-service/pom.xml package -DskipTests
+
+run: up
+	mvn -B -q -f services/archive-service/pom.xml spring-boot:run
 
 test-java:
-	@for d in $(SERVICES); do (cd services/$$d && mvn -B -q test) || exit 1; done
+	mvn -B -q -f services/archive-service/pom.xml test
 
 test-local: up
+	@curl -fsS http://localhost:8080/ >/dev/null || { echo "Start ArchiveApplication in IntelliJ or run 'make run' first"; exit 1; }
 	python3 postman/check_demo.py
 
 demo-reset:
 	docker compose down -v --remove-orphans
-	docker compose up -d --build --wait
+	docker compose up -d --wait
 
 clean:
 	docker compose down -v --remove-orphans
-	@for d in $(SERVICES); do (cd services/$$d && mvn -B -q clean) || exit 1; done
+	mvn -B -q -f services/archive-service/pom.xml clean
 
 logs:
 	docker compose logs -f

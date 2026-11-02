@@ -1,6 +1,6 @@
 # OrgArchive presentation revision — working notes
 
-Status: collecting requirements. Do not edit the existing slides, speaker notes, or PDF yet. This file is temporary and can be deleted after the revision.
+Status: collecting requirements. Short RU and EN speaker outlines now exist; the existing slides, German notes, and PDF remain untouched. This file is temporary and can be deleted after the revision.
 
 ## Main direction
 
@@ -16,7 +16,7 @@ Status: collecting requirements. Do not edit the existing slides, speaker notes,
 ## Provisional presentation order
 
 1. **Very short opening (optional).** The problem: a plausible system can fail when library vulnerabilities and application decisions combine. A PHP CVE reference is optional and still needs identification.
-2. **OrgArchive structure and data.** Client/Postman → public edge gateway → internal archive service → MariaDB. Show `app_user` and `document`; explain `organizationUuid` as the logical tenant identifier.
+2. **OrgArchive structure and data.** Client/Postman → Archive Service on localhost → MariaDB in Docker. Show `app_user` and `document`; explain `organizationUuid` as the logical tenant identifier.
 3. **Endpoints and intended access.** Public signup; HTTP Basic on protected routes; intended admin-only `/users`; regular-user document search. Explain which checks happen in the HTTP filter and which happen on methods.
 4. **IDE code walkthrough.** Switch from the PDF to the relevant files. Establish normal behavior and the intended tenant boundary before explaining either CVE.
 5. **Vulnerabilities and demo.** Explain CVE-2025-22223, the `debug=true` hash exposure, and CVE-2026-22730 in that order. Run the Postman collection. Decide later whether these explanations need slides or can be handled mostly in code.
@@ -28,13 +28,13 @@ This is an order of topics, not a commitment to six slides. The final deck shoul
 
 | Topic | File to open | Point to explain |
 | --- | --- | --- |
-| Public entry point | `services/edge-gateway/src/main/java/org/orgarchive/edge/ApiIndexController.java` | `GET /` lists routes for the demo; its `access` text is descriptive, not enforcement. |
-| Routing | `services/edge-gateway/src/main/resources/application.yml` | The gateway forwards signup, users, and document routes to the archive service. |
+| Public entry point | `services/archive-service/src/main/java/org/orgarchive/archive/ApiIndexController.java` | `GET /` lists all service routes for the demo; its `access` text is descriptive, not enforcement. |
+| Local startup | `docker-compose.yml` and `services/archive-service/src/main/resources/application.yml` | Docker runs only MariaDB on localhost:3306. Run `ArchiveApplication` from IntelliJ on localhost:8080; the Java seeder populates the database. |
 | Signup | `services/archive-service/src/main/java/org/orgarchive/archive/user/SignupController.java` | Public registration creates a regular user, hashes the password, generates an internal organization UUID, and returns only the username. |
 | HTTP authentication | `services/archive-service/src/main/java/org/orgarchive/archive/security/SecurityConfig.java` | HTTP Basic validates credentials against BCrypt hashes; `/signup` is public and protected routes require authentication. |
 | Intended admin rule | `services/archive-service/src/main/java/org/orgarchive/archive/user/AdminRoleSecurityContract.java` | The generic interface declares `@PreAuthorize("hasRole('ADMIN')")` for both list and direct lookup. |
 | User responses | `services/archive-service/src/main/java/org/orgarchive/archive/user/UserController.java` | Both responses omit organization UUIDs; `debug=true` adds password hashes to the list. Both methods implement the shared admin contract. |
-| Internal organization queries | `services/archive-service/src/main/java/org/orgarchive/archive/user/OrganizationController.java` | A second implementation of the admin contract. The gateway does not publish `/organizations`, so it is absent from Postman. |
+| Organization queries | `services/archive-service/src/main/java/org/orgarchive/archive/user/OrganizationController.java` | A second implementation of the admin contract. `/organizations` is reachable directly and listed by `GET /`; the Postman chain does not call it. |
 | Data model | `services/archive-service/src/main/java/org/orgarchive/archive/user/User.java` and `services/archive-service/src/main/java/org/orgarchive/archive/document/Document.java` | `app_user.organization_uuid` and `document.metadata.organizationUuid` represent the same logical tenant identifier; there is no organization table or foreign key. |
 | Document search HTTP layer | `services/archive-service/src/main/java/org/orgarchive/archive/document/DocumentController.java` | Maps the three search endpoints and passes the authenticated username and metadata filters to the service. |
 | Document search service | `services/archive-service/src/main/java/org/orgarchive/archive/document/DocumentSearchService.java` | Looks up the authenticated user's organization UUID and passes it with the filters to the repository. |
@@ -49,7 +49,7 @@ This is an order of topics, not a commitment to six slides. The final deck shoul
 - The schema diagram is optional. Explain verbally that each `document` row has a `metadata` text column containing JSON (`organizationUuid`, `category`, `revision`); do not spend a slide showing the JSON storage detail.
 - Which recent PHP CVE, if any, is the intended opening reference?
 - After the code walkthrough, how many vulnerability slides are still useful before Postman?
-- Does the Spring AI MariaDB converter belong in this product's normal document-search path? If not, should the application concept change or should the second CVE change?
+- Present the converter honestly as a metadata-filter translator reused from Spring AI's MariaDB vector-store module. MariaDB is vector-capable; this prototype does not perform vector search. No further vector implementation is planned for this demo.
 
 ## Code review finding: document search and the converter
 
@@ -67,7 +67,7 @@ This is an order of topics, not a commitment to six slides. The final deck shoul
 - `Filter.Expression` represents a metadata predicate, such as `organizationUuid == X AND category == 'report' AND revision >= 2`. Spring AI's MariaDB converter turns such a predicate into MariaDB SQL over document metadata. The expression can contain multiple fields and operators; it is separate from vector similarity itself. [Spring AI metadata-filter reference](https://docs.spring.io/spring-ai/reference/1.0/api/vectordbs.html#metadata-filters).
 - Therefore, the converter **can technically run without vector storage**, as it does in our current app on MariaDB 11.8. It does not create embeddings or search vectors. However, it is distributed as part of Spring AI's MariaDB vector-store module, so using that module solely for metadata filtering still needs a clear explanation.
 - The current ordinary-search design accepts `category` and `minRevision` filters and uses the Spring AI expression model to compile them. Direct use of a vector-store component remains a deliberate design choice. A full `MariaDBVectorStore` integration is the stronger explanation if we want the CVE to appear in its typical environment; it would require MariaDB 11.7+, embeddings, and more setup.
-- **Current status:** explanation recorded; no decision to change implementation yet.
+- **Decision:** keep the current metadata-only implementation and the second CVE. Do not add embeddings or vector search for this presentation; explain them as a possible future capability.
 
 ### Follow-up clarification: metadata filters are exact predicates
 
@@ -81,7 +81,13 @@ This is an order of topics, not a commitment to six slides. The final deck shoul
 
 - Spring AI provides a common metadata-filter expression language for its vector stores. A vector search may first find semantically similar documents and then restrict matches by exact metadata such as `category` or `revision`. The MariaDB converter translates those common expressions into MariaDB SQL over JSON metadata; it does not call a model or compute embeddings itself. [Spring AI vector-store reference](https://docs.spring.io/spring-ai/reference/1.0/api/vectordbs/mariadb.html#metadata-filtering).
 - In this demo, the `document` table has a `metadata` column of SQL `TEXT` containing JSON for each row, not a separate metadata table. `JSON_VALUE(metadata, '$.category')` reads one scalar value from that JSON. Explain this verbally when showing `DocumentRepository`; no dedicated DB slide is needed. [MariaDB JSON_VALUE reference](https://mariadb.com/docs/server/reference/sql-functions/special-functions/json-functions/json_value).
-- MariaDB was upgraded from 11.4 to the vector-capable 11.8 line. Compose enables `MARIADB_AUTO_UPGRADE`; its log confirms the system-table upgrade completed on the existing volume. Integration tests, the complete gateway demo chain, and a temporary vector-table query passed after the upgrade. A genuine Spring AI `MariaDBVectorStore` would still need embeddings, an `EmbeddingModel`, vector storage in the application, and a changed search flow. The SQL-injection advisory affects Spring AI converter versions, not MariaDB versions; the exploit still works after this database upgrade. [Spring AI prerequisites](https://docs.spring.io/spring-ai/reference/1.0/api/vectordbs/mariadb.html), [Spring advisory](https://spring.io/security/cve-2026-22730/).
+- MariaDB was upgraded from 11.4 to the vector-capable 11.8 line. Compose enables `MARIADB_AUTO_UPGRADE`; its log confirms the system-table upgrade completed on the existing volume. Integration tests, the complete demo chain, and a temporary vector-table query passed after the upgrade. A genuine Spring AI `MariaDBVectorStore` would still need embeddings, an `EmbeddingModel`, vector storage in the application, and a changed search flow. The SQL-injection advisory affects Spring AI converter versions, not MariaDB versions; the exploit still works after this database upgrade. [Spring AI prerequisites](https://docs.spring.io/spring-ai/reference/1.0/api/vectordbs/mariadb.html), [Spring advisory](https://spring.io/security/cve-2026-22730/).
+
+### Possible future vector-search implementation
+
+- Keep the distinction clear: metadata remains ordinary JSON fields (`organizationUuid`, `category`, `revision`); a separate embedding vector would represent document text for similarity search. Spring AI's `MariaDBVectorStore` schema has text, JSON metadata, and a `VECTOR(n)` embedding column. [MariaDB Vector Store reference](https://docs.spring.io/spring-ai/reference/1.0/api/vectordbs/mariadb.html).
+- The `Filter.Expression` for category and revision would still be useful. In a real vector search, the store would invoke its MariaDB converter internally while searching by query embedding. The current `DocumentRepository.search` instead invokes the converter directly for a metadata-only query.
+- The current `/documents/search-safe` remains a valid safe metadata-only query against the existing `document` table. It would not be a like-for-like safe version of a future similarity search: that path would also need query embedding, vector-distance ranking, a server-enforced organization condition, and safe handling of metadata-filter values (for example, a fixed Spring AI converter). Do not claim that a MariaDB version upgrade alone added vector search to the demo.
 
 Add answers and further requirements here as we go through the code. Do not use this draft as permission to change the current presentation yet.
 
@@ -96,7 +102,7 @@ Add answers and further requirements here as we go through the code. Do not use 
 - `UserController implements AdminRoleSecurityContract<String, String, UserDto>`. Java therefore requires `UserController` to provide `list(String filter, boolean debug)` and `get(String id)`; `@Override` asks the compiler to verify those methods. The interface does not provide reusable implementation code.
 - Spring MVC reads `@GetMapping` on the interface method and combines it with `@RequestMapping("/users")` on the controller, giving `GET /users`. No application code calls `list()` directly; Spring calls it when that HTTP route is requested.
 - The intended `ADMIN` rule is `@PreAuthorize` on the interface method. With `@EnableMethodSecurity`, Spring Security is meant to find it when invoking the concrete method. The affected Spring Security versions can miss an annotation on a parameterized interface or overridden method when the concrete target method has no annotation. This is CVE-2025-22223. It is a Spring annotation-resolution problem, not ordinary Java inheritance of annotations. [Spring advisory](https://spring.io/security/cve-2025-22223/).
-- **Revision implemented:** `AdminRoleSecurityContract<F,K,R>` now declares both `list` and `get`, each with `@PreAuthorize("hasRole('ADMIN')")`. `UserController` and `OrganizationController` both implement the contract. The organization routes exist only inside archive-service; the gateway does not forward them, and Postman does not use them.
+- **Revision implemented:** `AdminRoleSecurityContract<F,K,R>` now declares both `list` and `get`, each with `@PreAuthorize("hasRole('ADMIN')")`. `UserController` and `OrganizationController` both implement the contract. The organization routes are directly reachable and listed in the local API index; Postman does not use them.
 - Consequence: in the vulnerable Spring Security version, the inherited admin check can be skipped on **both** `GET /users` and `GET /users/{username}`. The direct lookup no longer demonstrates a protected comparison. The fixed version must reject both for a regular user. Neither user response includes organization UUIDs.
 - **Pending presentation revision:** the current slides and `SPEAKER-NOTES.de.md` still say that the direct user lookup is protected and that there is no organization controller. Update them only when the planned presentation revision begins.
 - **Naming decision:** rename the shared interface to `AdminRoleSecurityContract` so its name makes the intended role requirement explicit. This is an authorization contract; HTTP Basic authentication is configured separately in `SecurityConfig`.
