@@ -1,6 +1,6 @@
 # OrgArchive
 
-A local document archive for several organizations. Public signup assigns a new organization UUID, which stays in the user's account; document searches derive it from authentication. This lab demonstrates two independent library vulnerabilities in one Postman chain: a Spring Security method-authorization bypass and a Spring AI SQL injection.
+A local document archive for several organizations. Public signup assigns a new organization UUID, which stays in the user's account; document searches derive it from authentication. The lab runs MariaDB 11.8, which supports vectors, although this application currently uses metadata filtering rather than vector search. This lab demonstrates two independent library vulnerabilities in one Postman chain: a Spring Security method-authorization bypass and a Spring AI SQL injection.
 
 ## Run
 

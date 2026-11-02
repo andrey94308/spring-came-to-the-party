@@ -27,7 +27,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 @AutoConfigureMockMvc
 @Testcontainers
 class ArchiveChainIntegrationTest {
-    @Container static final MariaDBContainer<?> mariadb = new MariaDBContainer<>("mariadb:11.4")
+    @Container static final MariaDBContainer<?> mariadb = new MariaDBContainer<>("mariadb:11.8")
             .withDatabaseName("orgarchive").withUsername("orgarchive").withPassword("orgarchive");
 
     @DynamicPropertySource static void properties(DynamicPropertyRegistry registry) {

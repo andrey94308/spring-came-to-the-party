@@ -1,11 +1,12 @@
 services:
   mariadb:
-    image: mariadb:11.4
+    image: mariadb:11.8
     environment:
       MARIADB_ROOT_PASSWORD: rootpw
       MARIADB_DATABASE: orgarchive
       MARIADB_USER: orgarchive
       MARIADB_PASSWORD: orgarchive
+      MARIADB_AUTO_UPGRADE: "1"
     volumes:
       - mariadb-data:/var/lib/mysql
       - ./infra/mariadb/init:/docker-entrypoint-initdb.d:ro
