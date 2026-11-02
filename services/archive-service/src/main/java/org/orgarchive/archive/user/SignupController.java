@@ -23,7 +23,7 @@ public class SignupController {
     }
 
     public record SignupRequest(String username, String displayName, String email, String password) {}
-    public record SignupResponse(String username, String organizationUuid) {}
+    public record SignupResponse(String username) {}
 
     @PostMapping("/signup")
     @ResponseStatus(HttpStatus.CREATED)
@@ -50,6 +50,6 @@ public class SignupController {
         } catch (DataIntegrityViolationException e) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Username already exists", e);
         }
-        return new SignupResponse(username, organizationUuid);
+        return new SignupResponse(username);
     }
 }

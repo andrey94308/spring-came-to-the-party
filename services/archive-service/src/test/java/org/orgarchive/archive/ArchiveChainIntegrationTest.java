@@ -10,6 +10,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.Base64;
 import java.util.Map;
 import java.util.UUID;
+import org.orgarchive.archive.user.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -38,6 +39,7 @@ class ArchiveChainIntegrationTest {
 
     @Autowired MockMvc mvc;
     @Autowired ObjectMapper json;
+    @Autowired UserRepository users;
 
     @Test void signupAndMethodAuthorizationBoundary() throws Exception {
         mvc.perform(get("/users")).andExpect(status().isUnauthorized());
@@ -48,12 +50,13 @@ class ArchiveChainIntegrationTest {
                                 "displayName", "Demo Visitor", "email", username + "@example.test",
                                 "password", password))))
                 .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
-        String organizationUuid = json.readTree(response).get("organizationUuid").asText();
+        assertThat(json.readTree(response).has("organizationUuid")).isFalse();
+        String organizationUuid = users.findById(username).orElseThrow().getOrganizationUuid();
         assertThat(UUID.fromString(organizationUuid).toString()).isEqualTo(organizationUuid);
         String ownDocuments = mvc.perform(post("/documents/search")
                         .header("Authorization", basic(username, password))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(json.writeValueAsString(Map.of("organizationUuid", organizationUuid))))
+                        .content("{}"))
                 .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
         assertThat(ownDocuments).isEqualTo("[]");
         int expected = Boolean.getBoolean("demo.fixed-security") ? 403 : 200;
@@ -87,7 +90,8 @@ class ArchiveChainIntegrationTest {
                                 "displayName", "Bad Input", "email", "bad@example.test",
                                 "password", password, "role", "admin", "organizationUuid", "786298a5-8c02-56ce-ba8f-d2b41ec3333c"))))
                 .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
-        assertThat(json.readTree(rejectedPrivilegeFields).get("organizationUuid").asText())
+        assertThat(json.readTree(rejectedPrivilegeFields).has("organizationUuid")).isFalse();
+        assertThat(users.findById("evil-admin").orElseThrow().getOrganizationUuid())
                 .isNotEqualTo("786298a5-8c02-56ce-ba8f-d2b41ec3333c");
         mvc.perform(get("/users").header("Authorization", basic("evil-admin", password)))
                 .andExpect(status().is(expected));
@@ -114,19 +118,39 @@ class ArchiveChainIntegrationTest {
                 .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
         assertThat(organization).contains("accountCount");
         String annaUuid = "786298a5-8c02-56ce-ba8f-d2b41ec3333c";
-        String foreignUuid = UUID.randomUUID().toString();
-        assertThat(search("/documents/search", foreignUuid)).isEqualTo("[]");
-        assertThat(search("/documents/search", annaUuid))
+        assertThat(search("/documents/search", "nonexistent-category")).isEqualTo("[]");
+        assertThat(search("/documents/search", "report"))
                 .contains(annaUuid).doesNotContain("d3302858-83b5-5ec5-aba6-1f7c9da45bd0");
-        assertThat(search("/documents/search", foreignUuid + "' OR '1'='1"))
+        String filtered = mvc.perform(post("/documents/search")
+                        .header("Authorization", basic("anna", "sunshine"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json.writeValueAsString(Map.of("category", "report", "minRevision", 5))))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        assertThat(json.readTree(filtered).size()).isGreaterThan(0);
+        for (JsonNode doc : json.readTree(filtered)) {
+            assertThat(doc.get("metadata").asText()).contains("\"category\":\"report\"");
+            assertThat(json.readTree(doc.get("metadata").asText()).get("revision").asInt()).isGreaterThanOrEqualTo(5);
+        }
+        String revisionOnly = mvc.perform(post("/documents/search")
+                        .header("Authorization", basic("anna", "sunshine"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json.writeValueAsString(Map.of("minRevision", 10))))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        assertThat(json.readTree(revisionOnly).size()).isGreaterThan(0);
+        for (JsonNode doc : json.readTree(revisionOnly)) {
+            JsonNode metadata = json.readTree(doc.get("metadata").asText());
+            assertThat(metadata.get("organizationUuid").asText()).isEqualTo(annaUuid);
+            assertThat(metadata.get("revision").asInt()).isGreaterThanOrEqualTo(10);
+        }
+        assertThat(search("/documents/search", "report' OR '1'='1"))
                 .contains(annaUuid, "1ae53893-c399-57c3-ba32-16e55b435249", "aa2262cf-c84c-5f89-8853-dc9b2ebb4a7b",
                         "768fc845-aff9-5b32-b626-a8f05a8778d2", "d3302858-83b5-5ec5-aba6-1f7c9da45bd0",
                         "FLAG{integration-final}");
-        assertThat(search("/documents/search-safe", foreignUuid + "' OR '1'='1")).isEqualTo("[]");
+        assertThat(search("/documents/search-safe", "report' OR '1'='1")).isEqualTo("[]");
     }
 
-    private String search(String path, String organizationUuid) throws Exception {
-        String body = json.writeValueAsString(Map.of("organizationUuid", organizationUuid));
+    private String search(String path, String category) throws Exception {
+        String body = json.writeValueAsString(Map.of("category", category));
         return mvc.perform(post(path).header("Authorization", basic("anna", "sunshine"))
                         .contentType(MediaType.APPLICATION_JSON).content(body))
                 .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();

